@@ -1,5 +1,23 @@
 import xcore
 
+class FMT: pass
+FMT.ebabled = True
+FMT.ESC="\33" if FMT.ebabled else ""
+FMT.BOLD = FMT.ESC + "[1m" if FMT.ebabled else ""
+FMT.UNDER = FMT.ESC + "[4m" if FMT.ebabled else ""
+FMT.RED = FMT.ESC + "[31m" if FMT.ebabled else ""
+FMT.GREEN = FMT.ESC + "[32m" if FMT.ebabled else ""
+FMT.YELLOW = FMT.ESC + "[33m" if FMT.ebabled else ""
+FMT.BLUE = FMT.ESC + "[34m" if FMT.ebabled else ""
+FMT.MAGENTA = FMT.ESC + "[35m" if FMT.ebabled else ""
+FMT.CYAN = FMT.ESC + "[36m" if FMT.ebabled else ""
+FMT.OFF = FMT.ESC + "[0m" if FMT.ebabled else ""
+
+def indentation(lvl):
+    s = ""
+    for i in range(lvl): s += "  "
+    return s
+
 class PlopCode: pass
 PlopCode._BASE_ = 100
 PlopCode.BEGIN = PlopCode._BASE_ + 0
@@ -80,6 +98,10 @@ class PlopExporter(xcore.BaseExporter):
 			for i, blockToks in enumerate(self.toks):
 				parsed = parse_block(blockToks)
 				xcore.dbgmsg(str(i) + ": " + str(parsed))
+				blk = PlopBlock(self)
+				blk.compile(parsed)
+				blk.disasm()
+				self.blocks.append(blk)
 
 class PlopBlock:
 	def __init__(self, plop): # PlopExporter as a param 
@@ -177,6 +199,88 @@ class PlopBlock:
 			self.code.append(PlopCode.FVAL)
 			self.code.append(xcore.getBitsF32(code))
 
+	def disasm(self):
+		if not self.code: return
+		lvl = 0
+		sl = self.plop.strLst
+		ip = 0
+		while ip < len(self.code):
+			s = "---"
+			ips = FMT.GREEN + "{0:3d}".format(ip) + FMT.OFF
+			op = self.code[ip]
+			ip += 1
+			if op == PlopCode.BEGIN:
+				eloc = self.code[ip]
+				ip += 1
+				s = "BEGIN <" + FMT.GREEN + str(eloc) + FMT.OFF + ">"
+				lvl += 1
+			elif op == PlopCode.END:
+				s = "END"
+			elif op == PlopCode.VAR:
+				sid = self.code[ip]
+				ip += 1
+				s = "VAR " + str(sid) + " ; " + FMT.MAGENTA + sl.get(sid) + FMT.OFF
+			elif op == PlopCode.SYM:
+				sid = self.code[ip]
+				ip += 1
+				s = "SYM " + str(sid) + " ; " + FMT.BOLD + FMT.MAGENTA + sl.get(sid) + FMT.OFF
+			elif op == PlopCode.SET:
+				sid = self.code[ip]
+				ip += 1
+				s = "SET " + str(sid) +" ; " + sl.get(sid)
+			elif op == PlopCode.FVAL:
+				fbits = self.code[ip]
+				ip += 1
+				try:
+					fstr = str(xcore.setBitsF32(fbits))
+				except:
+					fstr = "<" + hex(fbits) + ">"
+				s = "FVAL " + fstr
+			elif op == PlopCode.SVAL:
+				sid = self.code[ip]
+				ip += 1
+				s = "SVAL " + str(sid) + " ; " + FMT.YELLOW + sl.get(sid) + FMT.OFF
+			elif op == PlopCode.IF:
+				yes = self.code[ip]
+				alt = self.code[ip + 1]
+				ip += 2
+				s = "IF (" + str(yes) + ", " + str(alt) + ")"
+			else:
+				if op == PlopCode.ADD:
+					s = "+"
+				elif op == PlopCode.SUB:
+					s = "-"
+				elif op == PlopCode.MUL:
+					s = "*"
+				elif op == PlopCode.DIV:
+					s = "/"
+				elif op == PlopCode.EQ:
+					s = "="
+				elif op == PlopCode.NE:
+					s = "!="
+				elif op == PlopCode.LT:
+					s = "<"
+				elif op == PlopCode.GT:
+					s = ">"
+				elif op == PlopCode.LE:
+					s = "<="
+				elif op == PlopCode.GE:
+					s = ">="
+				elif op == PlopCode.NOT:
+					s = "NOT"
+				elif op == PlopCode.AND:
+					s = "AND"
+				elif op == PlopCode.OR:
+					s = "OR"
+				elif op == PlopCode.XOR:
+					s = "XOR"
+				elif op == PlopCode.CALL:
+					s = "CALL"
+				narg = self.code[ip]
+				ip += 1
+				s += " (" + str(narg) + ")"
+			xcore.dbgmsg(indentation(lvl) + ips + ": " + s)
+			if op == PlopCode.END: lvl -= 1
 
 if __name__ == '__main__':
 	plop = PlopExporter()
