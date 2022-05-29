@@ -70,9 +70,22 @@ class PlopExporter(xcore.BaseExporter):
 
 	def writeHead(self, bw, top):
 		bw.writeFOURCC("info")
+		nblk = len(self.blocks)
+		bw.writeU32(nblk) # nblk
+		self.bodyOffsPos = bw.getPos()
+		bw.writeU32(0) # -> body
+		self.blkCatTop = bw.getPos()
+		for i in range(nblk):
+			bw.writeU32(0) # -> blk code
+			bw.writeU32(len(self.blocks[i].code))
 
 	def writeData(self, bw, top):
+		bw.patchCur(self.bodyOffsPos)
 		bw.writeFOURCC("code")
+		for i, blk in enumerate(self.blocks):
+			bw.align(0x10)
+			bw.patchCur(self.blkCatTop + i*8)
+			blk.write(bw)
 
 	def from_file(self, fname):
 		self.toks = None
@@ -281,6 +294,15 @@ class PlopBlock:
 				s += " (" + str(narg) + ")"
 			xcore.dbgmsg(indentation(lvl) + ips + ": " + s)
 			if op == PlopCode.END: lvl -= 1
+
+	def write(self, bw):
+		if not self.code: return
+		sl = self.plop.strLst
+		code = [op for op in self.code]
+		for offs in self.strs:
+			code[offs] = sl.getWriteId(code[offs])
+		for op in code:
+			bw.writeU32(op)
 
 if __name__ == '__main__':
 	plop = PlopExporter()
