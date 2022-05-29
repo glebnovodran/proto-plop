@@ -177,12 +177,8 @@ class PlopBlock:
 			self.code.append(PlopCode.FVAL)
 			self.code.append(xcore.getBitsF32(code))
 
-def main(args):
-	return 0
 
 if __name__ == '__main__':
-	import sys
 	plop = PlopExporter()
 	plop.from_file("test.pls")
 	plop.save("test.plop")
-	sys.exit(main(sys.argv))
