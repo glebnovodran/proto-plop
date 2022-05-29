@@ -1,0 +1,6 @@
+tmp/**
+__pycache__/**
+crosscore.*
+xcore.py
+*.plop
+*.pyc
