@@ -168,27 +168,27 @@ class PlopBlock:
 					self.code.append(PlopCode.SUB)
 				elif op=="*":
 					self.code.append(PlopCode.MUL)
-				elif op=="/":
+				elif op == "/":
 					self.code.append(PlopCode.DIV)
-				elif op=="=":
+				elif op == "=":
 					self.code.append(PlopCode.EQ)
-				elif op=="/=":
+				elif op == "/=":
 					self.code.append(PlopCode.NE)
-				elif op=="<":
+				elif op == "<":
 					self.code.append(PlopCode.LT)
-				elif op==">":
+				elif op == ">":
 					self.code.append(PlopCode.GT)
-				elif op=="<=":
+				elif op == "<=":
 					self.code.append(PlopCode.LE)
-				elif op==">=":
+				elif op == ">=":
 					self.code.append(PlopCode.GE)
-				elif op=="not":
+				elif op == "not":
 					self.code.append(PlopCode.NOT)
-				elif op=="and":
+				elif op == "and":
 					self.code.append(PlopCode.AND)
-				elif op=="or":
+				elif op == "or":
 					self.code.append(PlopCode.OR)
-				elif op=="xor":
+				elif op == "xor":
 					self.code.append(PlopCode.XOR)
 				else:
 					self.code.append(PlopCode.CALL)
