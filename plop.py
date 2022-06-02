@@ -121,7 +121,7 @@ class PlopBlock:
 		self.plop = plop
 
 	def emit_str(self, s):
-		sid = plop.strLst.add(s)
+		sid = self.plop.strLst.add(s)
 		self.strs.append(len(self.code))
 		self.code.append(sid)
 
