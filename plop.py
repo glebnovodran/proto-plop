@@ -42,7 +42,9 @@ PlopCode.NOT   = PlopCode._BASE_ + 18
 PlopCode.AND   = PlopCode._BASE_ + 19
 PlopCode.OR    = PlopCode._BASE_ + 20
 PlopCode.XOR   = PlopCode._BASE_ + 21
-PlopCode.CALL  = PlopCode._BASE_ + 22
+PlopCode.MIN   = PlopCode._BASE_ + 22
+PlopCode.MAX   = PlopCode._BASE_ + 23
+PlopCode.CALL  = PlopCode._BASE_ + 24
 
 def atom(tok):
 	a = None
@@ -190,6 +192,10 @@ class PlopBlock:
 					self.code.append(PlopCode.OR)
 				elif op == "xor":
 					self.code.append(PlopCode.XOR)
+				elif op == "min":
+					self.code.append(PlopCode.MIN)
+				elif op == "max":
+					self.code.append(PlopCode.MAX)
 				else:
 					self.code.append(PlopCode.CALL)
 					callFlg = True
@@ -287,6 +293,10 @@ class PlopBlock:
 					s = "OR"
 				elif op == PlopCode.XOR:
 					s = "XOR"
+				elif op == PlopCode.MIN:
+					s = "MIN"
+				elif op == PlopCode.MAX:
+					s = "MAX"
 				elif op == PlopCode.CALL:
 					s = "CALL"
 				narg = self.code[ip]

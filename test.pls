@@ -3,6 +3,9 @@
 (defvar val0 0)
 (defvar scl 1.2)
 (set val0 (* (+ val0 1 2 3) scl))
+(defvar val1 1)
+(min val1 val0 2 4 8)
+(max val1 0)
 (defvar tstName "Baten_Kaitos") ; no spaces in strings
 (defvar tstNum -3.14)
 
