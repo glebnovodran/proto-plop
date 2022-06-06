@@ -4,3 +4,5 @@ crosscore.*
 xcore.py
 *.plop
 *.pyc
+*.drac
+prepared.xml

@@ -1,0 +1,45 @@
+;$<node id="start">
+;$<after>
+(set next (if (gt iq 20) "programming1" "tractatus1"))
+;$</after>
+;$</node>
+
+;$<node id="programming1">
+;$<before>
+  (set "alignment" "programming")
+;$</before>
+;$<plsay>
+;$  Kinda want to make the world a better place...
+;$  Grab a sum of guilders along the way of course.
+;$</plsay>
+;$<say>
+;$ Well, yeah, there are worse ways to spend your life... I guess.
+;$</say>
+;$<after>
+  (set reputation (/ reputation (= name "Millioratta") 3.1415 1.9))
+  (set next "game_over")
+;$</after>
+;$</node>
+
+;$ <!-- tractatus branch-->
+
+;$<node id="tractatus1">
+;$<before>
+(set "alignment" "cooking")
+;$</before>
+;$<plsay>
+;$ I've heard about the loss of that ship in a solar system far away.
+;$ This was a fully-automatic vehicle, no lives lost,
+;$ so why is everybody so upset about the incident?
+;$</plsay>
+;$<say>
+;$ You see, things are not so simple...
+;$ It's not about the ship really, it's about its cargo...
+;$</say>
+;$<after>
+  (set reputation (+ reputation (= name "Millioratta") 22 20))
+  (set affinity (+ affinity (= name "Millioratta") 2 1))
+   (set knows_about_cargo 1)
+  (set next "tractatus2")
+;$</after>
+;$</node>
