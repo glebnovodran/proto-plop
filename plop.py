@@ -1,3 +1,4 @@
+import re
 import xcore
 
 class FMT: pass
@@ -69,6 +70,7 @@ class PlopExporter(xcore.BaseExporter):
 	def __init__(self):
 		xcore.BaseExporter.__init__(self)
 		self.sig = "PLOP"
+		self.retok = re.compile(r"""\s*(,@|[('`,)]|"(?:[\\].|[^\\"])*"|[^\s('"`,)]*)(.*)""")
 
 	def writeHead(self, bw, top):
 		bw.writeFOURCC("info")
@@ -97,12 +99,26 @@ class PlopExporter(xcore.BaseExporter):
 		f.close()
 		self.compile(src)
 
+	def from_str(self, str):
+		src = str.split("\n")
+		self.compile(src)
+
 	def compile(self, src):
 		self.toks = []
 		for line in src:
 			icomment = line.find(";")
 			if icomment >= 0: line = line[:icomment]
 			line = line.replace("\t", " ").replace("(", " ( ").replace(")", " ) ")
+			ltmp = line
+			while True:
+				tok, line = re.match(self.retok, line).groups()
+				if line is None or len(line) == 0 : break
+				if tok[0] == '"':
+					fstr = tok.replace(' ', '\xFF')
+					ltmp = ltmp.replace(tok, fstr)
+
+			line = ltmp
+
 			blkToks = line.split()
 			#xcore.dbgmsg("<" + str(blkToks) + ">")
 			if len(blkToks) > 0: self.toks.append(blkToks)
@@ -123,6 +139,7 @@ class PlopBlock:
 		self.plop = plop
 
 	def emit_str(self, s):
+		s = s.replace('\xFF', ' ')
 		sid = self.plop.strLst.add(s)
 		self.strs.append(len(self.code))
 		self.code.append(sid)
