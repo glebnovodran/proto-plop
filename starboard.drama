@@ -6,7 +6,7 @@
 
 ;$<node id="programming1">
 ;$<before>
-  (set "alignment" "programming")
+  (set alignment "programming")
 ;$</before>
 ;$<plsay>
 ;$  Kinda want to make the world a better place...
@@ -25,7 +25,7 @@
 
 ;$<node id="tractatus1">
 ;$<before>
-(set "alignment" "cooking")
+(set alignment "cooking")
 ;$</before>
 ;$<plsay>
 ;$ I've heard about the loss of that ship in a solar system far away.
