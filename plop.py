@@ -1,3 +1,4 @@
+import sys
 import re
 import xcore
 
@@ -106,9 +107,11 @@ class PlopExporter(xcore.BaseExporter):
 	def compile(self, src):
 		self.toks = []
 		for line in src:
+			if sys.version_info[0] < 3: line = line.encode("latin-1")
 			icomment = line.find(";")
 			if icomment >= 0: line = line[:icomment]
-			line = line.replace("\t", " ").replace("(", " ( ").replace(")", " ) ")
+			line = line.replace("\t", " ")
+			line = line.replace("(", " ( ").replace(")", " ) ")
 			ltmp = line
 			while True:
 				tok, line = re.match(self.retok, line).groups()
