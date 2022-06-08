@@ -85,11 +85,12 @@ class PlopExporter(xcore.BaseExporter):
 			bw.writeU32(len(self.blocks[i].code))
 
 	def writeData(self, bw, top):
+		bw.align(0x10)
 		bw.patchCur(self.bodyOffsPos)
 		bw.writeFOURCC("code")
 		for i, blk in enumerate(self.blocks):
 			bw.align(0x10)
-			bw.patchCur(self.blkCatTop + i*8)
+			bw.patchCur(self.blkCatTop - top + i*8)
 			blk.write(bw)
 
 	def from_file(self, fname):

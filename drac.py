@@ -110,8 +110,11 @@ class DramaExporter(xcore.BaseExporter):
 		for i, val in enumerate(self.plopLst):
 			plopExp = plop.PlopExporter()
 			plopExp.from_str(val)
-			bw.align(0x10)
-			bw.patchCur(self.plopIdOffs + i * 4)
+
+			# Account for 0x10 alignment set within PlopExporter.write
+			pos0 = bw.getPos()
+			pos1 = xcore.align(pos0, 0x10)
+			bw.patch(self.plopIdOffs - top + i * 4, pos1)
 			plopExp.write(bw)
 
 if __name__ == '__main__':
