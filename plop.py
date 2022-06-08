@@ -143,14 +143,9 @@ class PlopBlock:
 	def __init__(self, plop): # PlopExporter as a param 
 		self.plop = plop
 
-	def emit_str(self, s, existing = False):
-		#s = s.replace('\xFF', ' ')
-		sid = -1
-		if existing:
-			sid = int(s)
-		else:
-			sid = self.plop.strLst.add(s)
-			self.strs.append(len(self.code))
+	def emit_str(self, s):
+		sid = self.plop.strLst.add(s)
+		self.strs.append(len(self.code))
 		self.code.append(sid)
 
 	def compile(self, code):
@@ -237,7 +232,7 @@ class PlopBlock:
 		elif isinstance(code, str):
 			if code[0] == '"':
 				self.code.append(PlopCode.SVAL)
-				self.emit_str(code[1:-1], True)
+				self.code.append(int(code[1:-1]))
 			else:
 				self.code.append(PlopCode.SYM)
 				self.emit_str(code)
