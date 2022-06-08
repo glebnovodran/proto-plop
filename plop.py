@@ -111,17 +111,19 @@ class PlopExporter(xcore.BaseExporter):
 			icomment = line.find(";")
 			if icomment >= 0: line = line[:icomment]
 			line = line.replace("\t", " ")
-			line = line.replace("(", " ( ").replace(")", " ) ")
 			ltmp = line
 			while True:
 				tok, line = re.match(self.retok, line).groups()
 				if line is None or len(line) == 0 : break
 				if tok[0] == '"':
-					fstr = tok.replace(' ', '\xFF')
-					ltmp = ltmp.replace(tok, fstr)
+					s = tok[1:-1]
+					sid = self.strLst.add(s)
+					#fstr = tok.replace(' ', '\xFF')
+					ltmp = ltmp.replace(tok, "\"%d\""%sid)
 
 			line = ltmp
 
+			line = line.replace("(", " ( ").replace(")", " ) ")
 			blkToks = line.split()
 			#xcore.dbgmsg("<" + str(blkToks) + ">")
 			if len(blkToks) > 0: self.toks.append(blkToks)
@@ -141,10 +143,14 @@ class PlopBlock:
 	def __init__(self, plop): # PlopExporter as a param 
 		self.plop = plop
 
-	def emit_str(self, s):
-		s = s.replace('\xFF', ' ')
-		sid = self.plop.strLst.add(s)
-		self.strs.append(len(self.code))
+	def emit_str(self, s, existing = False):
+		#s = s.replace('\xFF', ' ')
+		sid = -1
+		if existing:
+			sid = int(s)
+		else:
+			sid = self.plop.strLst.add(s)
+			self.strs.append(len(self.code))
 		self.code.append(sid)
 
 	def compile(self, code):
@@ -230,7 +236,7 @@ class PlopBlock:
 		elif isinstance(code, str):
 			if code[0] == '"':
 				self.code.append(PlopCode.SVAL)
-				self.emit_str(code[1:-1])
+				self.emit_str(code[1:-1], True)
 			else:
 				self.code.append(PlopCode.SYM)
 				self.emit_str(code)
