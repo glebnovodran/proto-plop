@@ -1,6 +1,6 @@
 import xcore
-#import plop
-from plop import PlopExporter
+import plop
+
 from xml.dom.minidom import parse, parseString
 
 def get_text(parent, nodename):
@@ -41,10 +41,10 @@ class Node:
 
 
 	def write(self, bw, top):
-		bw.writeI16(self.strLst.getWriteId(self.plsay))
-		bw.writeI16(self.strLst.getWriteId(self.say))
-		bw.writeI16(self.before)
-		bw.writeI16(self.after)
+		bw.writeI32(self.strLst.getWriteId(self.plsay))
+		bw.writeI32(self.strLst.getWriteId(self.say))
+		bw.writeI32(self.before)
+		bw.writeI32(self.after)
 
 class DramaExporter(xcore.BaseExporter):
 	def __init__(self):
@@ -108,7 +108,7 @@ class DramaExporter(xcore.BaseExporter):
 
 		nplop = len(self.plopLst)
 		for i, val in enumerate(self.plopLst):
-			plopExp = PlopExporter()
+			plopExp = plop.PlopExporter()
 			plopExp.from_str(val)
 			bw.align(0x10)
 			bw.patchCur(self.plopIdOffs + i * 4)

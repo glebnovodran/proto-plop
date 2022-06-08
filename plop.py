@@ -118,8 +118,7 @@ class PlopExporter(xcore.BaseExporter):
 				if tok[0] == '"':
 					s = tok[1:-1]
 					sid = self.strLst.add(s)
-					#fstr = tok.replace(' ', '\xFF')
-					ltmp = ltmp.replace(tok, "\"%d\""%sid)
+					ltmp = ltmp.replace(tok, '"%d"'%sid)
 
 			line = ltmp
 
