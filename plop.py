@@ -164,8 +164,9 @@ class PlopBlock:
 			self.code.append(PlopCode.BEGIN)
 			self.stk.append(len(self.code))
 			self.code.append(0)
+
 			op = code[0]
-			#patchPos = len(self.code)
+
 			if op == "defvar":
 				self.code.append(PlopCode.VAR)
 				self.emit_str(code[1]) # name
