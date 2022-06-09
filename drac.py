@@ -79,7 +79,6 @@ class DramaExporter(xcore.BaseExporter):
 		tmpfile.writelines(prepared)
 		tmpfile.close()
 		xmldom = parseString(prepared)
-		#xmldom.normalize()
 		self.process_xml(xmldom)
 
 	def process_xml(self, xmldom):
@@ -91,18 +90,18 @@ class DramaExporter(xcore.BaseExporter):
 			self.nodeLst.append(node)
 
 	def writeHead(self, bw, top):
-		bw.writeFOURCC("info")
+		bw.writeFOURCC("head")
 		nnodes = len(self.nodeLst)
 		bw.writeU32(nnodes)
 		nplops = len(self.plopLst)
 		bw.writeU32(nplops)
-		self.plopIdOffs = bw.getPos()
+		self.plopCatPos = bw.getPos()
 		for plstr in self.plopLst:
 			bw.writeU32(0) # plop prog offsets
 
 	def writeData(self, bw, top):
 		bw.align(0x10)
-		bw.writeFOURCC("DDAT")
+		bw.writeFOURCC("body")
 		for node in self.nodeLst:
 			node.write(bw, top)
 
@@ -111,10 +110,9 @@ class DramaExporter(xcore.BaseExporter):
 			plopExp = plop.PlopExporter()
 			plopExp.from_str(val)
 
-			# Account for 0x10 alignment set within PlopExporter.write
-			pos0 = bw.getPos()
-			pos1 = xcore.align(pos0, 0x10)
-			bw.patch(self.plopIdOffs - top + i * 4, pos1)
+			bw.align(0x10)
+			pos = self.plopCatPos + i * 4
+			bw.patch(pos, bw.getPos() - top)
 			plopExp.write(bw)
 
 if __name__ == '__main__':
