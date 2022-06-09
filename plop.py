@@ -90,7 +90,7 @@ class PlopExporter(xcore.BaseExporter):
 		bw.writeFOURCC("code")
 		for i, blk in enumerate(self.blocks):
 			bw.align(0x10)
-			bw.patchCur(self.blkCatTop - top + i*8)
+			bw.patch(self.blkCatTop + i * 8, bw.getPos() - top)
 			blk.write(bw)
 
 	def from_file(self, fname):
