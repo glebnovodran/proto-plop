@@ -2,6 +2,10 @@ import xcore
 import plop
 
 from xml.dom.minidom import parse, parseString
+from array import array
+
+try: xrange
+except: xrange = range
 
 def get_text(parent, nodename):
 	txt = ""
@@ -49,7 +53,7 @@ class Node:
 class DramaExporter(xcore.BaseExporter):
 	def __init__(self):
 		xcore.BaseExporter.__init__(self)
-		self.sig = "DRAM"
+		self.sig = "DRAC"
 		self.xml = ""
 		self.nodeLst = []
 		self.plopLst = []
@@ -95,12 +99,15 @@ class DramaExporter(xcore.BaseExporter):
 		bw.writeU32(nnodes)
 		nplops = len(self.plopLst)
 		bw.writeU32(nplops)
+		self.bodyOffsPos = bw.getPos()
+		bw.writeU32(0) # -> body
 		self.plopCatPos = bw.getPos()
 		for plstr in self.plopLst:
-			bw.writeU32(0) # plop prog offsets
+			bw.writeU32(0) # --> plop prog
 
 	def writeData(self, bw, top):
 		bw.align(0x10)
+		bw.patch(self.bodyOffsPos, bw.getPos() - top)
 		bw.writeFOURCC("body")
 		for node in self.nodeLst:
 			node.write(bw, top)

@@ -86,7 +86,7 @@ class PlopExporter(xcore.BaseExporter):
 
 	def writeData(self, bw, top):
 		bw.align(0x10)
-		bw.patchCur(self.bodyOffsPos)
+		bw.patch(self.bodyOffsPos, bw.getPos() - top)
 		bw.writeFOURCC("code")
 		for i, blk in enumerate(self.blocks):
 			bw.align(0x10)
