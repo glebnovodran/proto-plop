@@ -1,6 +1,14 @@
 ;$<node id="start">
 ;$<after>
-(set next (if (gt iq 20) "programming1" "tractatus1"))
+  (defvar dummy 0)
+  (push_domain "Player")
+  (defvar moral_path "Undecided")
+
+  (defvar pl_iq (get_personal "iq"))
+
+  (defvar pl_name (get_personal "name"))
+  (defvar knows_about_cargo 0)
+  (set next (if (gt iq 20) "programming1" "tractatus1"))
 ;$</after>
 ;$</node>
 
@@ -16,7 +24,8 @@
 ;$ Well, yeah, there are worse ways to spend your life... I guess.
 ;$</say>
 ;$<after>
-  (set reputation (/ reputation (= name "Millioratta") 3.1415 1.9))
+  (set reputation (/ reputation (if (= name "Millioratta") 3.1415 1.9)))
+  (set moral_path (if (gt iq 40) "Evil" "Good"))
   (set next "game_over")
 ;$</after>
 ;$</node>
@@ -26,6 +35,7 @@
 ;$<node id="tractatus1">
 ;$<before>
 (set alignment "cooking")
+(set choice "alignment")
 ;$</before>
 ;$<plsay>
 ;$ I've heard about the loss of that ship in a solar system far away.
@@ -37,9 +47,9 @@
 ;$ It's not about the ship really, it's about its cargo...
 ;$</say>
 ;$<after>
-  (set reputation (+ reputation (= name "Millioratta") 22 20))
-  (set affinity (+ affinity (= name "Millioratta") 2 1))
-   (set knows_about_cargo 1)
+  (set reputation (+ reputation (if (= name "Millioratta") 22 20)))
+  (set affinity (+ affinity (if (= name "Millioratta") 2 1)))
+    (set knows_about_cargo 1)
   (set next "tractatus2")
 ;$</after>
 ;$</node>

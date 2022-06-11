@@ -18,6 +18,7 @@ def get_text(parent, nodename):
 
 class Node:
 	def __init__(self, strLst, plopLst):
+		self.id = -1
 		self.before = -1
 		self.after = -1
 		self.plsay = -1
@@ -27,6 +28,13 @@ class Node:
 		self.plopLst = plopLst
 
 	def from_xml(self, xmlnode):
+		nodeId = xmlnode.getAttribute("id")
+		if nodeId == "" :
+			xcore.dbgmsg("A drama node should have an 'id' attribute specified\n")
+			return False
+
+		self.id = self.strLst.add(nodeId)
+
 		txt = get_text(xmlnode, "before")
 		if txt != "" :
 			self.before = len(self.plopLst)
@@ -43,12 +51,16 @@ class Node:
 		txt = get_text(xmlnode, "say")
 		self.say = self.strLst.add(txt) if txt != "" else -1
 
+		return True
 
 	def write(self, bw, top):
-		bw.writeI32(self.strLst.getWriteId(self.plsay))
-		bw.writeI32(self.strLst.getWriteId(self.say))
+		wid = self.strLst.getWriteId(self.plsay)
+		bw.writeI32(self.strLst.getWriteId(self.id))
 		bw.writeI32(self.before)
 		bw.writeI32(self.after)
+		bw.writeI32(self.strLst.getWriteId(self.plsay))
+		bw.writeI32(self.strLst.getWriteId(self.say))
+
 
 class DramaExporter(xcore.BaseExporter):
 	def __init__(self):
@@ -88,27 +100,30 @@ class DramaExporter(xcore.BaseExporter):
 	def process_xml(self, xmldom):
 		xmlnodes = xmldom.getElementsByTagName("node")
 		xcore.dbgmsg("Found %d node(s)" % len(xmlnodes))
-		for xmlnode in xmlnodes:
+		for i, xmlnode in enumerate(xmlnodes):
+			xcore.dbgmsg("Processing node %d" % i)
 			node = Node(self.strLst, self.plopLst)
 			node.from_xml(xmlnode)
 			self.nodeLst.append(node)
 
 	def writeHead(self, bw, top):
 		bw.writeFOURCC("head")
-		nnodes = len(self.nodeLst)
-		bw.writeU32(nnodes)
-		nplops = len(self.plopLst)
-		bw.writeU32(nplops)
-		self.bodyOffsPos = bw.getPos()
-		bw.writeU32(0) # -> body
+		self.nnodes = len(self.nodeLst)
+		bw.writeU32(self.nnodes)
+		self.nplops = len(self.plopLst)
+		bw.writeU32(self.nplops)
+		self.nodesOffsPos = bw.getPos()
+		bw.writeU32(0) # -> nodes
 		self.plopCatPos = bw.getPos()
 		for plstr in self.plopLst:
 			bw.writeU32(0) # --> plop prog
 
 	def writeData(self, bw, top):
+		if self.nnodes == 0 : return
 		bw.align(0x10)
-		bw.patch(self.bodyOffsPos, bw.getPos() - top)
 		bw.writeFOURCC("body")
+
+		bw.patch(self.nodesOffsPos, bw.getPos() - top)
 		for node in self.nodeLst:
 			node.write(bw, top)
 
