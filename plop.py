@@ -337,6 +337,9 @@ class PlopBlock:
 			bw.writeU32(op)
 
 if __name__ == '__main__':
-	plop = PlopExporter()
-	plop.from_file("test.pls")
-	plop.save("test.plop")
+	if len(sys.argv) > 1 :
+		plop = PlopExporter()
+		fname = sys.argv[1]
+		print("\nCompiling %s\n"%fname)
+		plop.from_file(fname)
+		plop.save("out.plop")
