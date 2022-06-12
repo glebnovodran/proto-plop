@@ -10,5 +10,7 @@
 (defvar tstNum -3.14)
 (defvar tstName1 "Baten (Kaitos)") ; 
 (defvar tstName2 "Ar Nosurge (Ra) (Ciela)")
+(defvar tstName3 tstName1)
+(set tstName1 tstName2)
 (defvar flg (check_flag "Global" "flg0"))
 (set val0 (+ val0 (if (not (= flg 0)) 2 (+ 1 3))))

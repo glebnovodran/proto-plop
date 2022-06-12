@@ -8,7 +8,7 @@
 
   (defvar pl_name (get_personal "name"))
   (defvar knows_about_cargo 0)
-  (set next (if (gt iq 20) "programming1" "tractatus1"))
+  (set next (if (> iq 20) "programming1" "tractatus1"))
 ;$</after>
 ;$</node>
 
@@ -25,7 +25,7 @@
 ;$</say>
 ;$<after>
   (set reputation (/ reputation (if (= name "Millioratta") 3.1415 1.9)))
-  (set moral_path (if (gt iq 40) "Evil" "Good"))
+  (set moral_path (if (> iq 40) "Evil" "Good"))
   (set next "game_over")
 ;$</after>
 ;$</node>
