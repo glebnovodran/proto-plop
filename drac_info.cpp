@@ -5,14 +5,44 @@
 
 struct sxPlopData : sxData {
 	static const uint32_t KIND = XD_FOURCC('P', 'L', 'O', 'P');
-
+	struct BlockEntry {
+		uint32_t mOffs;
+		uint32_t mLen;
+	};
 	uint32_t mHeadTag;
 	uint32_t mBlockNum;
 	uint32_t mBodyOffs;
-	uint32_t mBlks[1];
+	BlockEntry mBlks[1];
 
 	uint32_t* get_block_code(const uint32_t bkid) const {
-		return reinterpret_cast<uint32_t*>(XD_INCR_PTR(this, mBlks[bkid]));
+		uint32_t offs = mBlks[bkid].mOffs;
+		uint8_t* pCodeBytes = XD_INCR_PTR(this, offs);
+		return reinterpret_cast<uint32_t*>(pCodeBytes);
+	}
+
+	size_t get_plop_size() const {
+		uint32_t* pFirst = get_block_code(0);
+		uint32_t len0 = mBlks[0].mLen;
+		uint32_t* pLast = get_block_code(mBlockNum - 1);
+		size_t len = mBlks[mBlockNum - 1].mLen;
+		uint8_t* pEnd = XD_INCR_PTR(pLast, len * sizeof(uint32_t));
+
+		ptrdiff_t diff = pEnd - reinterpret_cast<const uint8_t*>(this);
+		return diff;
+	}
+
+	void save(FILE* pOut) {
+		size_t sz = get_plop_size();
+		::fwrite(reinterpret_cast<void*>(this), sz, 1, pOut);
+	}
+
+	void save (const char* pOutPath) {
+		FILE* pOut = nxSys::fopen_w_bin(pOutPath);
+		if (!pOut) {
+			return;
+		}
+		save(pOut);
+		::fclose(pOut);
 	}
 };
 
@@ -42,7 +72,17 @@ struct sxDrama : sxData {
 		return (plopId < mPlopNum) && (plopId >= 0) ? reinterpret_cast<sxPlopData*>(XD_INCR_PTR(this, mPlopCat[plopId])) : nullptr;
 	}
 
-	void dump_info(FILE* pOut) {
+	void dump_plop_info(FILE* pOut, sxPlopData* pPlop, const uint32_t id, const char* pBinName) {
+		if (pPlop) {
+			::fprintf(pOut, "[ plop id:[%d] ; nblk: %d ]\n", id,  pPlop ? pPlop->mBlockNum : 0);
+			if (pBinName) {
+				pPlop->save(pBinName);
+			}
+		}
+	}
+
+	void dump_info(FILE* pOut, const bool savePlops) {
+		char buf[32] = {};
 		nxCore::dbg_msg("Dumping %s", pOut);
 		::fprintf(pOut, "Total %d nodes\n", mNodeNum);
 		NodeInfo* pNodes = get_node_top();
@@ -50,24 +90,44 @@ struct sxDrama : sxData {
 			::fprintf(pOut, "____________________________________\n");
 			NodeInfo* pNode = &pNodes[i];
 			::fprintf(pOut, "Node %d id='%s'\n\n", i, get_str(pNode->mId));
+			::fprintf(pOut, "[Before]: ");
 
 			sxPlopData* pPlop = get_plop_data(pNode->mBefore);
-			::fprintf(pOut, "Before plop id:[%d], nblk: %d\n", pNode->mBefore,  pPlop ? pPlop->mBlockNum : 0);
+			if (pPlop) {
+#if defined(_MSC_VER)
+				::sprintf_s(buf, "before_%d.plop", i);
+#else
+				::sprintf(buf, "before_%d.plop", i);
+#endif
+				dump_plop_info(pOut, pPlop, pNode->mBefore, savePlops ? buf : nullptr);
+			} else {
+				::fprintf(pOut, "[NONE]\n");
+			}
+
+			::fprintf(pOut, "[Player says]: %s\n", pNode->mPlSay >= 0 ? get_str(pNode->mPlSay) : "[NONE]");
+			::fprintf(pOut, "[Character says]: %s\n", pNode->mSay >= 0 ? get_str(pNode->mSay) : "[NONE]");
+
+			::fprintf(pOut, "[After]: ");
 
 			pPlop = get_plop_data(pNode->mAfter);
-			::fprintf(pOut, "After plop id:[%d], nblk: %d\n", pNode->mAfter, pPlop ? pPlop->mBlockNum : 0);
+			if (pPlop) {
+#if defined(_MSC_VER)
+				::sprintf_s(buf, "after_%d.plop", i);
+#else
+				::sprintf(buf, "after_%d.plop", i);
+#endif
+				dump_plop_info(pOut, pPlop, pNode->mAfter, savePlops ? buf : nullptr);
+			}
 
-			::fprintf(pOut, "Player says:%s\n", pNode->mPlSay >= 0 ? get_str(pNode->mPlSay) : "[MUTE]");
-			::fprintf(pOut, "Character says:%s\n", pNode->mSay >= 0 ? get_str(pNode->mSay) : "[MUTE]");
 		}
 	}
 
-	void dump_info(const char* pOutPath) {
+	void dump_info(const char* pOutPath, bool savePlop) {
 		FILE* pOut = nxSys::fopen_w_txt(pOutPath);
 		if (!pOut) {
 			return;
 		}
-		dump_info(pOut);
+		dump_info(pOut, savePlop);
 		::fclose(pOut);
 	}
 };
@@ -77,10 +137,11 @@ int main(int argc, char* argv[]) {
 
 	const char* pPath = nxApp::get_arg(0);
 	const char* pOutPath = nxApp::get_opt("out");
+	bool savePlops = nxApp::get_bool_opt("saveplop");
 	sxData* pData = nxData::load(pPath);
 	if (pData) {
 		sxDrama* pDrama = pData->as<sxDrama>();
-		pDrama->dump_info(pOutPath ? pOutPath : "drama_dump.txt");
+		pDrama->dump_info(pOutPath ? pOutPath : "drama_dump.txt", savePlops);
 	}
 
 	nxApp::reset();
