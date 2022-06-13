@@ -219,18 +219,10 @@ struct Drama : sxData {
 
 			PlopData* pPlop = get_plop_data(pNode->mBefore);
 			if (pPlop) {
-#if defined(_MSC_VER)
-				::sprintf_s(buf, "before_%d.plop", i);
-#else
-				::sprintf(buf, "before_%d.plop", i);
-#endif
+				XD_SPRINTF(XD_SPRINTF_BUF(buf, sizeof(buf)), "before_%d.plop", i);
 				dump_plop_info(pOut, pPlop, pNode->mBefore, savePlops ? buf : nullptr);
 
-#if defined(_MSC_VER)
-				::sprintf_s(buf, "before_%d.dpl", i);
-#else
-				::sprintf(buf, "before_%d.dpl", i);
-#endif
+				XD_SPRINTF(XD_SPRINTF_BUF(buf, sizeof(buf)), "before_%d.dpl", i);
 				pPlop->disasm(buf);
 			} else {
 				::fprintf(pOut, "[NONE]\n");
@@ -243,18 +235,10 @@ struct Drama : sxData {
 
 			pPlop = get_plop_data(pNode->mAfter);
 			if (pPlop) {
-#if defined(_MSC_VER)
-				::sprintf_s(buf, "after_%d.plop", i);
-#else
-				::sprintf(buf, "after_%d.plop", i);
-#endif
+				XD_SPRINTF(XD_SPRINTF_BUF(buf, sizeof(buf)), "after_%d.plop", i);
 				dump_plop_info(pOut, pPlop, pNode->mAfter, savePlops ? buf : nullptr);
 
-#if defined(_MSC_VER)
-				::sprintf_s(buf, "after_%d.dpl", i);
-#else
-				::sprintf(buf, "after_%d.dpl", i);
-#endif
+				XD_SPRINTF(XD_SPRINTF_BUF(buf, sizeof(buf)), "after_%d.dpl", i);
 				pPlop->disasm(buf);
 			}
 
