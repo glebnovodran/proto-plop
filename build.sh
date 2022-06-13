@@ -35,7 +35,7 @@ rm -f $EXE_PATH
 
 SRCS="`ls *.cpp`"
 INCS="-I $CROSSCORE_DIR"
-$CXX -ggdb -ffast-math -ftree-vectorize -std=c++11 $INCS $SRCS -o $EXE_PATH $*
+$CXX -pthread -ggdb -ffast-math -ftree-vectorize -std=c++11 $INCS $SRCS -o $EXE_PATH $*
 
 echo -n "Build result: "
 if [ -f "$EXE_PATH" ]; then
