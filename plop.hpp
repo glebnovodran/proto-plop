@@ -3,33 +3,15 @@
 
 struct PlopData : sxData {
 
+#if defined(PLOP_OP) 
+#	undef PLOP_OP
+#endif
+
+#define PLOP_OP(SYM, ID) SYM = _BASE_ + ID ,
+
 	enum class Op : uint32_t {
 		_BASE_ = 100,
-		BEGIN  = _BASE_ + 0,
-		END    = _BASE_ + 1,
-		VAR    = _BASE_ + 2,
-		SYM    = _BASE_ + 3,
-		SET    = _BASE_ + 4,
-		FVAL   = _BASE_ + 5,
-		SVAL   = _BASE_ + 6,
-		IF     = _BASE_ + 7,
-		ADD    = _BASE_ + 8,
-		SUB    = _BASE_ + 9,
-		MUL    = _BASE_ + 10,
-		DIV    = _BASE_ + 11,
-		EQ     = _BASE_ + 12,
-		NE     = _BASE_ + 13,
-		LT     = _BASE_ + 14,
-		GT     = _BASE_ + 15,
-		LE     = _BASE_ + 16,
-		GE     = _BASE_ + 17,
-		NOT    = _BASE_ + 18,
-		AND    = _BASE_ + 19,
-		OR     = _BASE_ + 20,
-		XOR    = _BASE_ + 21,
-		MIN    = _BASE_ + 22,
-		MAX    = _BASE_ + 23,
-		CALL   = _BASE_ + 24,
+#		include "plop_op.inc"
 	};
 
 	struct BlockEntry {
