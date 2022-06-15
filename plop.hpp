@@ -18,6 +18,7 @@ struct PlopData : sxData {
 		uint32_t mOffs;
 		uint32_t mLen;
 	};
+
 	uint32_t mHeadTag;
 	uint32_t mBlkNum;
 	uint32_t mBodyOffs;

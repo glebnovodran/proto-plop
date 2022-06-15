@@ -4,8 +4,6 @@
 
 #include "plop.hpp"
 
-//static const char* s_opNames[] = { "BEGIN", "END", "VAR", "SYM", "SET", "FVAL", "SVAL", "IF", "+", "-", "*", "/",
-//									"=", "!=", "<", ">", "<=", ">=", "NOT", "AND", "OR", "XOR", "MIN", "MAX", "CALL" };
 #if defined(PLOP_OP) 
 #	undef PLOP_OP
 #endif
