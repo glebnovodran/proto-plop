@@ -1,17 +1,18 @@
 /* SPDX-License-Identifier: MIT */
 /* SPDX-FileCopyrightText: 2022 Glib Novodran <novodran@gmail.com> */
+
 #include <crosscore.hpp>
 
 #include "plop.hpp"
 
+
+static const char* s_opNames[] = { 
 #if defined(PLOP_OP) 
 #	undef PLOP_OP
 #endif
-
 #define PLOP_OP(SYM, ID) #SYM ,
-
-static const char* s_opNames[] = { 
-#		include "plop_op.inc"
+#include "plop_op.inc"
+#undef PLOP_OP
 };
 
 const uint32_t PlopData::KIND = XD_FOURCC('P', 'L', 'O', 'P');

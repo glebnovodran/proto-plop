@@ -3,15 +3,14 @@
 
 struct PlopData : sxData {
 
+	enum class Op : uint32_t {
+		_BASE_ = 100,
 #if defined(PLOP_OP) 
 #	undef PLOP_OP
 #endif
-
 #define PLOP_OP(SYM, ID) SYM = _BASE_ + ID ,
-
-	enum class Op : uint32_t {
-		_BASE_ = 100,
-#		include "plop_op.inc"
+#include "plop_op.inc"
+#undef PLOP_OP
 	};
 
 	struct BlockEntry {
