@@ -52,6 +52,19 @@ void PlopData::disasm(FILE* pOut) {
 						++i;
 					}
 					break;
+				case Op::LSET: {
+						sid = pCode[i];
+						uint32_t val = pCode[i + 1];
+						::fprintf(pOut, " %d <%d>; %s\n", sid, val, get_str(sid));
+						i += 2;
+					}
+					break;
+				case Op::LGET: {
+						sid = pCode[i];
+						::fprintf(pOut, " %d; %s\n", sid, get_str(sid));
+						++i;
+					}
+					break;
 				case Op::FVAL: {
 						float fval = nxCore::f32_set_bits(pCode[i]);
 						::fprintf(pOut, " %f\n", fval);
@@ -69,26 +82,27 @@ void PlopData::disasm(FILE* pOut) {
 						uint32_t no = pCode[i + 1];
 						::fprintf(pOut, "(%d, %d)\n", yes, no);
 						i += 2;
-						//++lvl;
 					}
 					break;
 				case Op::ADD:
 				case Op::SUB:
-				case Op::MUL: 
-				case Op::DIV: 
-				case Op::EQ : 
-				case Op::NE : 
-				case Op::LT : 
-				case Op::GT : 
-				case Op::LE : 
-				case Op::GE : 
-				case Op::NOT: 
-				case Op::AND: 
-				case Op::OR : 
+				case Op::MUL:
+				case Op::DIV:
+				case Op::NEG:
+				case Op::EQ :
+				case Op::NE :
+				case Op::LT :
+				case Op::GT :
+				case Op::LE :
+				case Op::GE :
+				case Op::NOT:
+				case Op::AND:
+				case Op::OR :
 				case Op::XOR: 
-				case Op::MIN: 
-				case Op::MAX: 
-				case Op::CALL: {
+				case Op::MIN:
+				case Op::MAX:
+				case Op::CALL:
+				case Op::LIST: {
 						uint32_t narg = pCode[i];
 						::fprintf(pOut, " ( %d )\n", narg);
 						++i;

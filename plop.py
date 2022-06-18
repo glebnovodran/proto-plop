@@ -34,19 +34,23 @@ PlopCode.ADD   = PlopCode._BASE_ + 8
 PlopCode.SUB   = PlopCode._BASE_ + 9
 PlopCode.MUL   = PlopCode._BASE_ + 10
 PlopCode.DIV   = PlopCode._BASE_ + 11
-PlopCode.EQ    = PlopCode._BASE_ + 12
-PlopCode.NE    = PlopCode._BASE_ + 13
-PlopCode.LT    = PlopCode._BASE_ + 14
-PlopCode.GT    = PlopCode._BASE_ + 15
-PlopCode.LE    = PlopCode._BASE_ + 16
-PlopCode.GE    = PlopCode._BASE_ + 17
-PlopCode.NOT   = PlopCode._BASE_ + 18
-PlopCode.AND   = PlopCode._BASE_ + 19
-PlopCode.OR    = PlopCode._BASE_ + 20
-PlopCode.XOR   = PlopCode._BASE_ + 21
-PlopCode.MIN   = PlopCode._BASE_ + 22
-PlopCode.MAX   = PlopCode._BASE_ + 23
-PlopCode.CALL  = PlopCode._BASE_ + 24
+PlopCode.NEG   = PlopCode._BASE_ + 12
+PlopCode.EQ    = PlopCode._BASE_ + 13
+PlopCode.NE    = PlopCode._BASE_ + 14
+PlopCode.LT    = PlopCode._BASE_ + 15
+PlopCode.GT    = PlopCode._BASE_ + 16
+PlopCode.LE    = PlopCode._BASE_ + 17
+PlopCode.GE    = PlopCode._BASE_ + 18
+PlopCode.NOT   = PlopCode._BASE_ + 19
+PlopCode.AND   = PlopCode._BASE_ + 20
+PlopCode.OR    = PlopCode._BASE_ + 21
+PlopCode.XOR   = PlopCode._BASE_ + 22
+PlopCode.MIN   = PlopCode._BASE_ + 23
+PlopCode.MAX   = PlopCode._BASE_ + 24
+PlopCode.CALL  = PlopCode._BASE_ + 25
+PlopCode.LIST  = PlopCode._BASE_ + 26
+PlopCode.LSET  = PlopCode._BASE_ + 27
+PlopCode.LGET  = PlopCode._BASE_ + 28
 
 def atom(tok):
 	a = None
@@ -170,6 +174,22 @@ class PlopBlock:
 				self.code.append(PlopCode.SET)
 				self.emit_str(code[1])
 				self.compile_sub(code[2])
+			elif op == "lset":
+				self.code.append(PlopCode.LSET)
+				self.emit_str(code[1]) # name
+				patchPos = len(self.code)
+				self.code.append(0)
+				#idx
+				self.compile_sub(code[2])
+				#val
+				self.code[patchPos] = len(self.code)
+				self.compile_sub(code[3])
+			elif op == "lget":
+				self.code.append(PlopCode.LGET)
+				self.emit_str(code[1]) # name
+				#idx
+				self.compile_sub(code[2])
+
 			elif op == "if":
 				self.code.append(PlopCode.IF)
 				patchPos = len(self.code)
@@ -184,7 +204,7 @@ class PlopBlock:
 				self.code[patchPos + 1] = len(self.code)
 				self.compile_sub(code[3])
 			else:
-				# arithmetic, logic or call
+				# arithmetic, logic, list or call
 				callFlg = False
 				if op == "+":
 					self.code.append(PlopCode.ADD)
@@ -194,6 +214,8 @@ class PlopBlock:
 					self.code.append(PlopCode.MUL)
 				elif op == "/":
 					self.code.append(PlopCode.DIV)
+				elif op == "neg":
+					self.code.append(PlopCode.NEG)
 				elif op == "=":
 					self.code.append(PlopCode.EQ)
 				elif op == "/=":
@@ -218,9 +240,12 @@ class PlopBlock:
 					self.code.append(PlopCode.MIN)
 				elif op == "max":
 					self.code.append(PlopCode.MAX)
+				elif op == "list":
+					self.code.append(PlopCode.LIST)
 				else:
 					self.code.append(PlopCode.CALL)
 					callFlg = True
+
 				self.code.append(len(code) - 1)
 				if callFlg: self.compile_sub(op)
 				for exp in code[1:]:
@@ -269,6 +294,16 @@ class PlopBlock:
 				sid = self.code[ip]
 				ip += 1
 				s = "SET " + str(sid) +" ; " + sl.get(sid)
+			elif op == PlopCode.LSET:
+				sid = self.code[ip]
+				ip += 1
+				val = self.code[ip]
+				ip += 1
+				s = "LSET " + str(sid) + " <" + str(val) + ">" + " ; " + sl.get(sid)
+			elif op == PlopCode.LGET:
+				sid = self.code[ip]
+				ip += 1
+				s = "LGET " + str(sid) + " ; " + sl.get(sid)
 			elif op == PlopCode.FVAL:
 				fbits = self.code[ip]
 				ip += 1
@@ -295,6 +330,8 @@ class PlopBlock:
 					s = "*"
 				elif op == PlopCode.DIV:
 					s = "/"
+				elif op == PlopCode.NEG:
+					s = "NEG"
 				elif op == PlopCode.EQ:
 					s = "="
 				elif op == PlopCode.NE:
@@ -321,6 +358,9 @@ class PlopBlock:
 					s = "MAX"
 				elif op == PlopCode.CALL:
 					s = "CALL"
+				elif op == PlopCode.LIST:
+					s = "LIST"
+
 				narg = self.code[ip]
 				ip += 1
 				s += " (" + str(narg) + ")"
@@ -339,7 +379,7 @@ class PlopBlock:
 if __name__ == '__main__':
 	if len(sys.argv) > 1 :
 		plop = PlopExporter()
-		fname = sys.argv[1]
+		fname = "test.pls" #sys.argv[1]
 		print("\nCompiling %s\n"%fname)
 		plop.from_file(fname)
 		plop.save("out.plop")

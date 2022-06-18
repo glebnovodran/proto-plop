@@ -1,11 +1,16 @@
 ;$<node id="start">
 ;$<after>
-  (defvar dummy 0)
+  (defvar dummyId 0)
+  (defvar dummylist (list 0 1 dummy))
+
   (push_domain "Player")
   (defvar moral_path "Undecided")
 
   (defvar pl_iq (get_personal "iq"))
 
+  (lset dummylist (+ dummyId 1) pl_iq)
+  (lget dummylist 2)
+  (lget dummylist dummyId)
   (defvar pl_name (get_personal "name"))
   (defvar knows_about_cargo 0)
   (set next (if (> iq 20) "programming1" "tractatus1"))
