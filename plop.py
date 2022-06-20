@@ -26,12 +26,11 @@ def load_plopcodes():
 	retok = re.compile(r'PLOP_OP\((?P<name>\w+),\s+(?P<val>\d+)')
 	with open("plop_op.inc", "r") as f:
 		for line in f:
-			m = retok.search(line)
+			m = retok.match(line)
 			if m:
 				codename = m.group("name")
 				codeval = m.group("val")
 				setattr(PlopCode, codename, int(codeval))
-				print("{0} : {1}".format(codename, codeval))
 
 load_plopcodes()
 
