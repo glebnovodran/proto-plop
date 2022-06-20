@@ -21,36 +21,19 @@ def indentation(lvl):
     return s
 
 class PlopCode: pass
-PlopCode._BASE_ = 100
-PlopCode.BEGIN = PlopCode._BASE_ + 0
-PlopCode.END   = PlopCode._BASE_ + 1
-PlopCode.VAR   = PlopCode._BASE_ + 2
-PlopCode.SYM   = PlopCode._BASE_ + 3
-PlopCode.SET   = PlopCode._BASE_ + 4
-PlopCode.FVAL  = PlopCode._BASE_ + 5
-PlopCode.SVAL  = PlopCode._BASE_ + 6
-PlopCode.IF    = PlopCode._BASE_ + 7
-PlopCode.ADD   = PlopCode._BASE_ + 8
-PlopCode.SUB   = PlopCode._BASE_ + 9
-PlopCode.MUL   = PlopCode._BASE_ + 10
-PlopCode.DIV   = PlopCode._BASE_ + 11
-PlopCode.NEG   = PlopCode._BASE_ + 12
-PlopCode.EQ    = PlopCode._BASE_ + 13
-PlopCode.NE    = PlopCode._BASE_ + 14
-PlopCode.LT    = PlopCode._BASE_ + 15
-PlopCode.GT    = PlopCode._BASE_ + 16
-PlopCode.LE    = PlopCode._BASE_ + 17
-PlopCode.GE    = PlopCode._BASE_ + 18
-PlopCode.NOT   = PlopCode._BASE_ + 19
-PlopCode.AND   = PlopCode._BASE_ + 20
-PlopCode.OR    = PlopCode._BASE_ + 21
-PlopCode.XOR   = PlopCode._BASE_ + 22
-PlopCode.MIN   = PlopCode._BASE_ + 23
-PlopCode.MAX   = PlopCode._BASE_ + 24
-PlopCode.CALL  = PlopCode._BASE_ + 25
-PlopCode.LIST  = PlopCode._BASE_ + 26
-PlopCode.LSET  = PlopCode._BASE_ + 27
-PlopCode.LGET  = PlopCode._BASE_ + 28
+
+def load_plopcodes():
+	retok = re.compile(r'PLOP_OP\((?P<name>\w+),\s+(?P<val>\d+)')
+	with open("plop_op.inc", "r") as f:
+		for line in f:
+			m = retok.search(line)
+			if m:
+				codename = m.group("name")
+				codeval = m.group("val")
+				setattr(PlopCode, codename, int(codeval))
+				print("{0} : {1}".format(codename, codeval))
+
+load_plopcodes()
 
 def atom(tok):
 	a = None
@@ -160,6 +143,9 @@ class PlopBlock:
 
 	def compile_sub(self, code):
 		if isinstance(code, list):
+#			if (len(code) == 0):
+#				self.code.append(PlopCode.NOP)
+#				return
 			self.code.append(PlopCode.BEGIN)
 			self.stk.append(len(self.code))
 			self.code.append(0)
@@ -379,7 +365,7 @@ class PlopBlock:
 if __name__ == '__main__':
 	if len(sys.argv) > 1 :
 		plop = PlopExporter()
-		fname = "test.pls" #sys.argv[1]
+		fname = sys.argv[1]
 		print("\nCompiling %s\n"%fname)
 		plop.from_file(fname)
 		plop.save("out.plop")
