@@ -8,7 +8,7 @@ struct PlopData : sxData {
 #if defined(PLOP_OP) 
 #	undef PLOP_OP
 #endif
-#define PLOP_OP(SYM, ID) SYM = _BASE_ + ID ,
+#define PLOP_OP(SYM, ID) SYM = ID ,
 #include "plop_op.inc"
 #undef PLOP_OP
 	};

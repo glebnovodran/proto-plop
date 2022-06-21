@@ -29,7 +29,8 @@ void PlopData::disasm(FILE* pOut) {
 			::fprintf(pOut, "%3d:", i);
 			lvl = (op == Op::END) && (lvl > 0) ? lvl - 1 : lvl;
 			for (uint32_t l = 0; l < lvl; ++l) { ::fprintf(pOut, "\t"); }
-
+			uint32_t strid = uint32_t(op) - uint32_t(Op::_BASE_);
+			const char* pOpName = s_opNames[uint32_t(op) - uint32_t(Op::_BASE_)];
 			::fprintf(pOut, "%s ", s_opNames[uint32_t(op) - uint32_t(Op::_BASE_)]);
 			++i;
 
@@ -41,6 +42,7 @@ void PlopData::disasm(FILE* pOut) {
 						++lvl;
 					}
 					break;
+				case Op::NOP:
 				case Op::END:
 					::fprintf(pOut, "\n");
 					break;

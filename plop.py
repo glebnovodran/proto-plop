@@ -142,9 +142,9 @@ class PlopBlock:
 
 	def compile_sub(self, code):
 		if isinstance(code, list):
-#			if (len(code) == 0):
-#				self.code.append(PlopCode.NOP)
-#				return
+			if (len(code) == 0):
+				self.code.append(PlopCode.NOP)
+				return
 			self.code.append(PlopCode.BEGIN)
 			self.stk.append(len(self.code))
 			self.code.append(0)
@@ -260,7 +260,10 @@ class PlopBlock:
 			ips = FMT.GREEN + "{0:3d}".format(ip) + FMT.OFF
 			op = self.code[ip]
 			ip += 1
-			if op == PlopCode.BEGIN:
+			if op == PlopCode.NOP:
+				s = "NOP"
+				ip += 1
+			elif op == PlopCode.BEGIN:
 				eloc = self.code[ip]
 				ip += 1
 				s = "BEGIN <" + FMT.GREEN + str(eloc) + FMT.OFF + ">"
