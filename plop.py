@@ -227,6 +227,8 @@ class PlopBlock:
 					self.code.append(PlopCode.MAX)
 				elif op == "list":
 					self.code.append(PlopCode.LIST)
+				elif op == "nop":
+					self.code.append(PlopCode.NOP)
 				else:
 					self.code.append(PlopCode.CALL)
 					callFlg = True

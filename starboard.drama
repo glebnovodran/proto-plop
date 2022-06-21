@@ -1,8 +1,8 @@
 ;$<node id="start">
 ;$<after>
+  ()
   (defvar dummyId 0)
   (defvar dummylist (list 0 1 dummy))
-
   (push_domain "Player")
   (defvar moral_path "Undecided")
 

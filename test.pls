@@ -1,4 +1,11 @@
-;(1 2 3)
+()
+(nop)
+(1 2 3)
+(list 1 2 3)
+(nop (+ 1 1) (print "Ahoj") )
+( (+ 1 1) (print "Ahoj") )
+(if 1 ((print "1") (print "2")) ())
+
 (set_domain "Global")
 (defvar flg0 0)
 (defvar val0 0)
