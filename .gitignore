@@ -6,4 +6,5 @@ xcore.py
 *.plop
 *.pyc
 *.drac
+*.dpl
 prepared.xml
