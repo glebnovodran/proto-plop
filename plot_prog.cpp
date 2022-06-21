@@ -3,7 +3,7 @@
 
 #include <crosscore.hpp>
 
-#include "plop.hpp"
+#include "plot_prog.hpp"
 
 
 static const char* s_opNames[] = { 

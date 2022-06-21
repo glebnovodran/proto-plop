@@ -2,7 +2,7 @@
 /* SPDX-FileCopyrightText: 2022 Glib Novodran <novodran@gmail.com> */
 
 #include <crosscore.hpp>
-#include "plop.hpp"
+#include "plot_prog.hpp"
 
 
 struct Drama : sxData {
