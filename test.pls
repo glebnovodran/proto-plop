@@ -3,6 +3,8 @@
 (1 2 3)
 (defvar vec1 (+ (list 1 2 3) (list 4 5 6)))
 (defvar vec1 (* 2.0 (list 1 2 3)))
+(defvar vec1 (+ (list 1 2 3) (list 4 5 6) (list 7 8 9)))
+(set vec1 (dot vec1 vec1))
 ((print "Ahoj") (print "42"))
 (nop (+ 1 1) (print "Ahoj") )
 ( (+ 1 1) (print "Ahoj") )
@@ -32,3 +34,13 @@
 (set val1 (lget vec0 3))
 (set val1 (lget vec0 (+ 1 1 1)))
 (set val0 (if flg0 1 0))
+
+(defvar mtype 0.0)
+(print mtype)
+(set mtype "valkyria")
+(print mtype)
+(set mtype (list "Grichka" 2.0))
+(print mtype)
+
+
+(+ val0 "123") ; this should produce a runtime error
