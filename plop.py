@@ -1,6 +1,7 @@
 import sys
 import re
 import xcore
+import os.path
 
 class FMT: pass
 FMT.ebabled = True
@@ -372,4 +373,5 @@ if __name__ == '__main__':
 		fname = sys.argv[1]
 		print("\nCompiling %s\n"%fname)
 		plop.from_file(fname)
-		plop.save("out.plop")
+		splitPath = os.path.splitext(fname);
+		plop.save(splitPath[0] + ".plop")
