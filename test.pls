@@ -44,5 +44,7 @@
 
 
 (+ val0 "123") ; this should produce a runtime error
+(+ (list 1 2 3) (list 4 5 6))
+(+ (list 1 2 3) (list 4 5 6 7))
 
 (defvar llst (list (list 1 2 3) (list 4 5 6) "Chacha" "Grichka") )
