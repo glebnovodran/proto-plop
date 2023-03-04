@@ -1,3 +1,4 @@
+pint/prog/**
 tmp/**
 __pycache__/**
 bin/**
