@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	nxApp::reset();
-	//nxCore::mem_dbg();
+	nxCore::mem_dbg();
 	reset_sys();
 
 	return 0;
