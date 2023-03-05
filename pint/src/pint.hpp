@@ -17,7 +17,7 @@ public:
 
 		bool valid() const { return pText != nullptr && textSize > 0;}
 
-		void print() {
+		void print() const {
 			if (valid()) {
 				for (size_t i = 0; i < textSize; ++i) {
 					nxCore::dbg_msg("%c", pText[i]);
@@ -54,6 +54,46 @@ public:
 	bool eof() const { return mCur >= mSrcSize; }
 	Line get_line();
 };
+
+class ExecContext {
+protected:
+	cxStrStore* mpStrs;
+public:
+	ExecContext() {
+		mpStrs = cxStrStore::create();
+	}
+
+	~ExecContext() {
+		cxStrStore::destroy(mpStrs);
+	}
+
+	bool valid() const {
+		return mpStrs != nullptr;
+	}
+
+	char* add_str(const char* pStr) {
+		return valid()? mpStrs->add(pStr) : nullptr;
+	}
+
+	void print_vars() const;
+};
+
+class CodeBlock : public cxLexer::TokenFunc {
+protected:
+	ExecContext& mCtx;
+public:
+	CodeBlock(ExecContext& ctx) : mCtx(ctx) {}
+
+	virtual bool operator()(const cxLexer::Token& tok) { return true; }
+
+	void parse(const SrcCode::Line& line);
+	
+	void eval();
+\
+	void print() const;
+
+};
+
 
 void interp(const char* pSrcPath);
 

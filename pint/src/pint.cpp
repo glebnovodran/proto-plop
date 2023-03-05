@@ -13,16 +13,19 @@ void interp(const char* pSrcPath) {
 	}
 
 	SrcCode src(pSrc, srcSize, 32);
-	int i = 0;
+	ExecContext ctx;
+	CodeBlock blk(ctx);
+
 	while (!src.eof()) {
 		SrcCode::Line line = src.get_line();
-		nxCore::dbg_msg("\nLine %d, size : %d\n", i, line.textSize);
 		line.print();
-		++i;
+		if (line.valid()) {
+			blk.parse(line);
+			blk.print();
+			blk.eval();
+		}
 	}
-	//
-	// . . .
-	//
+
 	src.reset();
 	nxCore::bin_unload(pSrc);
 }
@@ -57,6 +60,22 @@ SrcCode::Line SrcCode::get_line() {
 
 	SrcCode::Line line = {mpLineBuf, linePos};
 	return line;
+}
+
+void ExecContext::print_vars() const {
+	// . . .
+}
+
+void CodeBlock::parse(const SrcCode::Line& line) {
+	// . . .
+}
+	
+void CodeBlock::eval() {
+	// . . .
+}
+
+void CodeBlock::print() const {
+	// . . .
 }
 
 } // Pint
