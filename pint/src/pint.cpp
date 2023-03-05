@@ -16,7 +16,7 @@ void interp(const char* pSrcPath) {
 	int i = 0;
 	while (!src.eof()) {
 		SrcCode::Line line = src.get_line();
-		nxCore::dbg_msg("Line %d, size : %d\n", i, line.textSize);
+		nxCore::dbg_msg("\nLine %d, size : %d\n", i, line.textSize);
 		line.print();
 		++i;
 	}
@@ -28,24 +28,26 @@ void interp(const char* pSrcPath) {
 }
 
 SrcCode::Line SrcCode::get_line() {
-	size_t skipped = 0;
 	if (mpLineBuf == nullptr) {
 		mpLineBuf = reinterpret_cast<char*>(nxCore::mem_alloc(mChunkSize));
 		mLineBufSize = mChunkSize;
 	}
 
 	size_t lineStart = mCur;
-
-	for (size_t cur = mCur, i = 0; cur < mSrcSize; ++cur) {
-		if (cur >= mLineBufSize) {
+	size_t skipped = 0;
+	size_t linePos = 0;
+	while (!eof()) {
+		linePos = (mCur - skipped) - lineStart;
+		if (linePos >= mLineBufSize) {
 			mpLineBuf = reinterpret_cast<char*>(nxCore::mem_realloc(mpLineBuf, mLineBufSize + mChunkSize));
 			mLineBufSize += mChunkSize;
 		}
-		char ch = mpSrc[cur];
+
+		char ch = mpSrc[mCur];
 		if (ch == '\r') {
 			skipped++;
 		} else {
-			mpLineBuf[i++] = ch;
+			mpLineBuf[linePos++] = ch;
 		}
 		mCur++;
 		if (ch == '\n') {
@@ -53,7 +55,7 @@ SrcCode::Line SrcCode::get_line() {
 		}
 	}
 
-	SrcCode::Line line = {mpLineBuf, (mCur - skipped) - lineStart};
+	SrcCode::Line line = {mpLineBuf, linePos};
 	return line;
 }
 
