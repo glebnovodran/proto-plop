@@ -114,5 +114,49 @@ void CodeBlock::print() const {
 	// . . .
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void CodeItem::set_none() {
+	kind = Kind::NON;
+	val.num = 0;
+}
+bool CodeItem::is_none() const {
+	return kind == Kind::NON;
+}
+
+void CodeItem::set_sym(const char* pStr) {
+	kind = Kind::SYM;
+	size_t sz = nxCalc::clamp(nxCore::str_len(pStr), size_t(0), CodeItem::SYM_MAX_LEN);
+	nxCore::mem_copy(val.sym, pStr, sz);
+	val.sym[sz] = '\x0';
+}
+bool CodeItem::is_sym() const {
+	return kind == Kind::SYM;
+}
+
+void CodeItem::set_num(double num) {
+	kind = Kind::SYM;
+	val.num = num;
+}
+bool CodeItem::is_num() const {
+	return kind == Kind::NUM;
+}
+
+void CodeItem::set_str(const char* pStr) {
+	kind = Kind::STR;
+	val.pStr = pStr;
+}
+bool CodeItem::is_str() const {
+	return kind == Kind::STR;
+}
+
+void CodeItem::set_list(CodeList* pLst) {
+	kind = Kind::LST;
+	val.pLst = pLst;
+}
+bool CodeItem::is_list() const {
+	return kind == Kind::LST;
+}
+
 } // Pint
 

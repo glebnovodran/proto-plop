@@ -1,5 +1,8 @@
 namespace Pint {
 
+struct CodeItem;
+struct CodeList;
+
 class SrcCode {
 protected:
 	const char* mpSrc;
@@ -79,6 +82,47 @@ public:
 	void print() const;
 };
 
+struct CodeItem {
+	static const size_t SYM_MAX_LEN = 63;
+
+	enum class Kind : uint32_t {
+		NON = 0,
+		SYM,
+		NUM,
+		STR,
+		LST
+	};
+
+	union {
+		char sym[SYM_MAX_LEN+1];
+		const char* pStr;
+		CodeList* pLst;
+		double num;
+	} val;
+
+	Kind kind;
+
+	void set_none();
+	bool is_none() const;
+
+	void set_sym(const char* pStr);
+	bool is_sym() const;
+
+	void set_num(double num);
+	bool is_num() const;
+
+	void set_str(const char* pStr);
+	bool is_str() const;
+
+	void set_list(CodeList* pLst);
+	bool is_list() const;
+};
+
+struct CodeList {
+	uint32_t num;
+	uint32_t reserved;
+	CodeItem pItem[1];
+};
 
 void interp(const char* pSrcPath);
 
