@@ -146,7 +146,7 @@ bool CodeItem::is_sym() const {
 }
 
 void CodeItem::set_num(double num) {
-	kind = Kind::SYM;
+	kind = Kind::NUM;
 	val.num = num;
 }
 bool CodeItem::is_num() const {
@@ -167,6 +167,40 @@ void CodeItem::set_list(CodeList* pLst) {
 }
 bool CodeItem::is_list() const {
 	return kind == Kind::LST;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void CodeList::init() {
+	if (mpItems == nullptr) {
+		size_t sz = mChunkSize * sizeof(CodeItem);
+		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
+		nxCore::mem_zero(mpItems, sz);
+		mNumItems = 0;
+		mSize = mChunkSize;
+	}
+}
+
+void CodeList::reset() {
+	if (mpItems) {
+		nxCore::mem_free(mpItems);
+		mpItems = nullptr;
+		mNumItems = 0;
+		mSize = mChunkSize;
+	}
+}
+
+bool CodeList::valid() const {
+	return (mpItems != nullptr);
+}
+
+void CodeList::append(const CodeItem& itm) {
+	if (mNumItems >= mSize) {
+		size_t newSz = (mSize + mChunkSize)*sizeof(CodeItem);
+		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
+		mSize += mChunkSize;
+	}
+	mpItems[mNumItems++] = itm;
 }
 
 } // Pint

@@ -1,7 +1,7 @@
 namespace Pint {
 
 struct CodeItem;
-struct CodeList;
+class CodeList;
 
 class SrcCode {
 protected:
@@ -109,10 +109,28 @@ struct CodeItem {
 	bool is_list() const;
 };
 
-struct CodeList {
-	uint32_t num;
-	uint32_t reserved;
-	CodeItem pItem[1];
+class CodeList {
+protected:
+	CodeItem* mpItems;
+	uint32_t mChunkSize;
+	uint32_t mNumItems;
+	uint32_t mSize;
+public:
+	CodeList(const uint32_t chunkSize = 2)
+	:
+	mpItems(nullptr),
+	mChunkSize(chunkSize),
+	mNumItems(0)
+	{}
+
+	void init();
+
+	void reset();
+
+	bool valid() const;
+
+	void append(const CodeItem& itm);
+
 };
 
 void interp(const char* pSrcPath);
