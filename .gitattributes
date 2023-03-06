@@ -1,2 +1,3 @@
 * -text
 text/*.pls linguist-detectable=false
+text/*.drama linguist-detectable=false
