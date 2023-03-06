@@ -30,6 +30,29 @@ void interp(const char* pSrcPath) {
 	nxCore::bin_unload(pSrc);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void SrcCode::Line::print() const {
+	if (valid()) {
+		for (size_t i = 0; i < textSize; ++i) {
+			nxCore::dbg_msg("%c", pText[i]);
+		}
+		nxCore::dbg_msg("\n");
+	} else {
+		nxCore::dbg_msg("invalid\n");
+	}
+}
+
+bool SrcCode::Line::valid() const {
+	return pText != nullptr && textSize > 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool SrcCode::eof() const {
+	return mCur >= mSrcSize;
+}
+
 SrcCode::Line SrcCode::get_line() {
 	if (mpLineBuf == nullptr) {
 		mpLineBuf = reinterpret_cast<char*>(nxCore::mem_alloc(mChunkSize));
@@ -62,8 +85,21 @@ SrcCode::Line SrcCode::get_line() {
 	return line;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+char* ExecContext::add_str(const char* pStr) {
+	return mpStrs != nullptr? mpStrs->add(pStr) : nullptr;
+}
+
 void ExecContext::print_vars() const {
 	// . . .
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool CodeBlock::operator()(const cxLexer::Token& tok) {
+	// . . .
+	return true;
 }
 
 void CodeBlock::parse(const SrcCode::Line& line) {

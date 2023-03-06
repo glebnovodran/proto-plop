@@ -15,18 +15,9 @@ public:
 		const char* pText;
 		size_t textSize;
 
-		bool valid() const { return pText != nullptr && textSize > 0;}
+		bool valid() const;
 
-		void print() const {
-			if (valid()) {
-				for (size_t i = 0; i < textSize; ++i) {
-					nxCore::dbg_msg("%c", pText[i]);
-				}
-				nxCore::dbg_msg("\n");
-			} else {
-				nxCore::dbg_msg("invalid\n");
-			}
-		}
+		void print() const;
 	};
 
 	SrcCode(const char* pSrc, size_t srcSize, const size_t cnkSize = 4096)
@@ -51,7 +42,8 @@ public:
 		}
 	}
 
-	bool eof() const { return mCur >= mSrcSize; }
+	bool eof() const;
+
 	Line get_line();
 };
 
@@ -67,13 +59,7 @@ public:
 		cxStrStore::destroy(mpStrs);
 	}
 
-	bool valid() const {
-		return mpStrs != nullptr;
-	}
-
-	char* add_str(const char* pStr) {
-		return valid()? mpStrs->add(pStr) : nullptr;
-	}
+	char* add_str(const char* pStr);
 
 	void print_vars() const;
 };
@@ -84,14 +70,13 @@ protected:
 public:
 	CodeBlock(ExecContext& ctx) : mCtx(ctx) {}
 
-	virtual bool operator()(const cxLexer::Token& tok) { return true; }
+	virtual bool operator()(const cxLexer::Token& tok);
 
 	void parse(const SrcCode::Line& line);
 	
 	void eval();
 
 	void print() const;
-
 };
 
 
