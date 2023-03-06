@@ -85,6 +85,17 @@ SrcCode::Line SrcCode::get_line() {
 	return line;
 }
 
+void SrcCode::reset() {
+	if (mpLineBuf) {
+		nxCore::mem_free(mpLineBuf);
+		mpLineBuf = nullptr;
+		mLineBufSize = 0;
+		mCur = 0;
+		mpSrc = nullptr;
+		mSrcSize = 0;
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 char* ExecContext::add_str(const char* pStr) {

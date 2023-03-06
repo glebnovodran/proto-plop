@@ -34,16 +34,7 @@ public:
 		mChunkSize = nxCalc::clamp(cnkSize, (size_t)(16), (size_t)(1024 * 1024));
 	}
 
-	void reset() {
-		if (mpLineBuf) {
-			nxCore::mem_free(mpLineBuf);
-			mpLineBuf = nullptr;
-			mLineBufSize = 0;
-			mCur = 0;
-			mpSrc = nullptr;
-			mSrcSize = 0;
-		}
-	}
+	void reset();
 
 	bool eof() const;
 
