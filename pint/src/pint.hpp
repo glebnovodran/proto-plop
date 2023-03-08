@@ -130,7 +130,21 @@ public:
 	bool valid() const;
 
 	void append(const CodeItem& itm);
+};
 
+struct ListStack {
+	static const int CODE_LST_MAX = 256;
+
+	CodeList* lists[CODE_LST_MAX];
+	int ptr;
+
+	void reset() { ptr = 0; }
+
+	CodeList* top();
+
+	void push(CodeList* pLst);
+
+	CodeList* pop();
 };
 
 void interp(const char* pSrcPath);

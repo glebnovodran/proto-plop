@@ -203,5 +203,25 @@ void CodeList::append(const CodeItem& itm) {
 	mpItems[mNumItems++] = itm;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+CodeList* ListStack::top() {
+	return ptr - 1 < 0 ? nullptr : lists[ptr - 1];
+}
+
+void ListStack::push(CodeList* pLst) {
+	if (ptr < CODE_LST_MAX) {
+		lists[ptr++] = pLst;
+	}
+}
+
+CodeList* ListStack::pop() {
+	CodeList* pList = top();
+	if (pList) {
+		ptr--;
+	}
+	return pList;
+}
+
 } // Pint
 
