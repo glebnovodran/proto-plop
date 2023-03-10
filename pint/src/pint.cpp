@@ -97,6 +97,29 @@ void SrcCode::reset() {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ExecContext::ExecContext() {
+	mpStrs = cxStrStore::create();
+	mpListStack = nxCore::tMem<ListStack>::alloc(1, "pint:stack");
+	mpLists = nxCore::tMem<CodeList>::alloc(ListStack::CODE_LST_MAX, "pint:codelists");
+	reset();
+}
+
+ExecContext::~ExecContext() {
+	cxStrStore::destroy(mpStrs);
+	nxCore::tMem<ListStack>::free(mpListStack);
+	nxCore::tMem<CodeList>::free(mpLists, ListStack::CODE_LST_MAX);
+}
+
+CodeList* ExecContext::new_list() {
+	CodeList* pLst = nullptr;
+
+	return pLst;
+}
+
+void ExecContext::reset() {
+	mpListStack->reset();
+	mCurLst = 0;
+}
 
 char* ExecContext::add_str(const char* pStr) {
 	return mpStrs != nullptr? mpStrs->add(pStr) : nullptr;
@@ -110,6 +133,39 @@ void ExecContext::print_vars() const {
 
 bool CodeBlock::operator()(const cxLexer::Token& tok) {
 	// . . .
+	CodeItem item;
+	item.set_none();
+
+	ListStack* pStack = mCtx.get_stack();
+	CodeList* pTopLst = pStack->top();
+
+	if (tok.is_punctuation()) {
+		if (tok.id == cxXqcLexer::TokId::TOK_SEMICOLON) return false;
+		if (tok.id == cxXqcLexer::TokId::TOK_LPAREN) {
+			CodeList* pNewLst = mCtx.new_list();
+			pStack->push(pNewLst);
+			item.set_list(pNewLst);
+		} else if (tok.id == cxXqcLexer::TokId::TOK_RPAREN) {
+			pStack->pop();
+		} else {
+			item.set_sym(tok.val.c);
+		}
+	} else if (tok.is_symbol()) {
+		item.set_sym(reinterpret_cast<char*>(tok.val.p));
+	} else if (tok.id == cxXqcLexer::TokId::TOK_FLOAT) {
+		item.set_num(tok.val.f);
+	} else if (tok.id == cxXqcLexer::TokId::TOK_INT) {
+		item.set_num(tok.val.i);
+	} else if ((tok.id == cxXqcLexer::TokId::TOK_QSTR) || (tok.id == cxXqcLexer::TokId::TOK_SQSTR)) {
+		char* pStr = mCtx.add_str(reinterpret_cast<char*>(tok.val.p));
+		item.set_str(pStr);
+	}
+
+	if (!item.is_none()) {
+		if (pTopLst) {
+			pTopLst->append(item);
+		}
+	}
 	return true;
 }
 
@@ -170,15 +226,14 @@ bool CodeItem::is_list() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 void CodeList::init() {
-	if (mpItems == nullptr) {
-		size_t sz = mChunkSize * sizeof(CodeItem);
-		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
+	if (mpItems) {
+		size_t sz = mSize * sizeof(CodeItem);
 		nxCore::mem_zero(mpItems, sz);
-		mNumItems = 0;
-		mSize = mChunkSize;
+	} else {
+		mSize = 0;
 	}
+	mNumItems = 0;
 }
 
 void CodeList::reset() {
@@ -195,6 +250,11 @@ bool CodeList::valid() const {
 }
 
 void CodeList::append(const CodeItem& itm) {
+	if (mpItems == nullptr) {
+		size_t sz = mChunkSize * sizeof(CodeItem);
+		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
+		mSize = mChunkSize;
+	}
 	if (mNumItems >= mSize) {
 		size_t newSz = (mSize + mChunkSize)*sizeof(CodeItem);
 		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
@@ -202,7 +262,6 @@ void CodeList::append(const CodeItem& itm) {
 	}
 	mpItems[mNumItems++] = itm;
 }
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CodeList* ListStack::top() {

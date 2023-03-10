@@ -2,6 +2,7 @@ namespace Pint {
 
 struct CodeItem;
 class CodeList;
+struct ListStack;
 
 class SrcCode {
 protected:
@@ -44,14 +45,19 @@ public:
 class ExecContext {
 protected:
 	cxStrStore* mpStrs;
+	ListStack* mpListStack;
+	CodeList* mpLists;
+	uint32_t mCurLst;
 public:
-	ExecContext() {
-		mpStrs = cxStrStore::create();
-	}
+	ExecContext();
 
-	~ExecContext() {
-		cxStrStore::destroy(mpStrs);
-	}
+	~ExecContext();
+
+	ListStack* get_stack() { return mpListStack; }
+
+	CodeList* new_list();
+
+	void reset();
 
 	char* add_str(const char* pStr);
 
@@ -121,7 +127,13 @@ public:
 	mpItems(nullptr),
 	mChunkSize(chunkSize),
 	mNumItems(0)
-	{}
+	{
+		init();
+	}
+
+	~CodeList() {
+		reset();
+	}
 
 	void init();
 
