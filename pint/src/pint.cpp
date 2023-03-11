@@ -23,6 +23,7 @@ void interp(const char* pSrcPath) {
 			blk.parse(line);
 			blk.print();
 			blk.eval();
+			blk.reset();
 		}
 	}
 
@@ -99,26 +100,10 @@ void SrcCode::reset() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ExecContext::ExecContext() {
 	mpStrs = cxStrStore::create();
-	mpListStack = nxCore::tMem<ListStack>::alloc(1, "pint:stack");
-	mpLists = nxCore::tMem<CodeList>::alloc(ListStack::CODE_LST_MAX, "pint:codelists");
-	reset();
 }
 
 ExecContext::~ExecContext() {
 	cxStrStore::destroy(mpStrs);
-	nxCore::tMem<ListStack>::free(mpListStack);
-	nxCore::tMem<CodeList>::free(mpLists, ListStack::CODE_LST_MAX);
-}
-
-CodeList* ExecContext::new_list() {
-	CodeList* pLst = nullptr;
-
-	return pLst;
-}
-
-void ExecContext::reset() {
-	mpListStack->reset();
-	mCurLst = 0;
 }
 
 char* ExecContext::add_str(const char* pStr) {
@@ -130,19 +115,38 @@ void ExecContext::print_vars() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CodeBlock::reset() {
+	mpListStack->reset();
+	mNumAllocList = 0;
+}
+
+CodeBlock::CodeBlock(ExecContext& ctx) : mCtx(ctx) {
+	mpListStack = nxCore::tMem<ListStack>::alloc(1, "pint:stack");
+	mpLists = nxCore::tMem<CodeList>::alloc(ListStack::CODE_LST_MAX, "pint:codelists");
+	reset();
+}
+
+CodeBlock::~CodeBlock() {
+	nxCore::tMem<ListStack>::free(mpListStack);
+	nxCore::tMem<CodeList>::free(mpLists, ListStack::CODE_LST_MAX);
+}
+
+CodeList* CodeBlock::new_list() {
+	CodeList* pLst = &mpLists[mNumAllocList++];
+	return pLst;
+}
 
 bool CodeBlock::operator()(const cxLexer::Token& tok) {
-	// . . .
 	CodeItem item;
 	item.set_none();
 
-	ListStack* pStack = mCtx.get_stack();
+	ListStack* pStack = get_stack();
 	CodeList* pTopLst = pStack->top();
 
 	if (tok.is_punctuation()) {
 		if (tok.id == cxXqcLexer::TokId::TOK_SEMICOLON) return false;
 		if (tok.id == cxXqcLexer::TokId::TOK_LPAREN) {
-			CodeList* pNewLst = mCtx.new_list();
+			CodeList* pNewLst = new_list();
 			pStack->push(pNewLst);
 			item.set_list(pNewLst);
 		} else if (tok.id == cxXqcLexer::TokId::TOK_RPAREN) {
@@ -170,17 +174,39 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 }
 
 void CodeBlock::parse(const SrcCode::Line& line) {
-	// . . .
+	cxLexer lexer;
+	lexer.set_text(line.pText, line.textSize);
+	lexer.scan(*this);
 }
 	
 void CodeBlock::eval() {
 	// . . .
+	get_stack()->reset();
+}
+
+void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
+	CodeItem* pItems = pLst->get_items();
+	uint32_t sz = pLst->size();
+	for (uint32_t i = 0; i < sz; ++i) {
+		const CodeItem& item = pItems[i];
+		if (item.is_list()) {
+			nxCore::dbg_msg("%*c- LST %p\n", lvl, ' ', item.val.pLst);
+			print_sub(item.val.pLst, lvl+1);
+		} else if (item.is_num()) {
+			nxCore::dbg_msg("%*cNUM %f\n", lvl, ' ', item.val.num);
+		} else if (item.is_sym()) {
+			nxCore::dbg_msg("%*cSYM %s\n", lvl, ' ', item.val.sym);
+		} else if (item.is_str()) {
+			nxCore::dbg_msg("%*cSTR \"%s\"\n", lvl, ' ', item.val.pStr);
+		}
+	}
 }
 
 void CodeBlock::print() const {
-	// . . .
+	if (mNumAllocList == 0) return;
+	nxCore::dbg_msg("# lists: %d\n", mNumAllocList);
+	print_sub(mpLists, 1);
 }
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CodeItem::set_none() {
@@ -262,6 +288,7 @@ void CodeList::append(const CodeItem& itm) {
 	}
 	mpItems[mNumItems++] = itm;
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CodeList* ListStack::top() {

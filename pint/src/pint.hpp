@@ -45,17 +45,10 @@ public:
 class ExecContext {
 protected:
 	cxStrStore* mpStrs;
-	ListStack* mpListStack;
-	CodeList* mpLists;
-	uint32_t mCurLst;
 public:
 	ExecContext();
 
 	~ExecContext();
-
-	ListStack* get_stack() { return mpListStack; }
-
-	CodeList* new_list();
 
 	void reset();
 
@@ -67,14 +60,28 @@ public:
 class CodeBlock : public cxLexer::TokenFunc {
 protected:
 	ExecContext& mCtx;
+	ListStack* mpListStack;
+	CodeList* mpLists;
+	uint32_t mNumAllocList;
+
+	void print_sub(const CodeList* lst, int lvl = 0) const;
+
 public:
-	CodeBlock(ExecContext& ctx) : mCtx(ctx) {}
+	CodeBlock(ExecContext& ctx);
+
+	~CodeBlock();
+
+	ListStack* get_stack() const { return mpListStack; }
+
+	CodeList* new_list();
 
 	virtual bool operator()(const cxLexer::Token& tok);
 
 	void parse(const SrcCode::Line& line);
 	
 	void eval();
+
+	void reset();
 
 	void print() const;
 };
@@ -142,6 +149,10 @@ public:
 	bool valid() const;
 
 	void append(const CodeItem& itm);
+
+	CodeItem* get_items() const { return mpItems; }
+
+	uint32_t size() const { return mSize; }
 };
 
 struct ListStack {
