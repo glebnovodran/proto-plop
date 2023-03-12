@@ -127,7 +127,7 @@ protected:
 	CodeItem* mpItems;
 	uint32_t mChunkSize;
 	uint32_t mNumItems;
-	uint32_t mSize;
+	uint32_t mCapacity;
 public:
 	CodeList(const uint32_t chunkSize = 2)
 	:
@@ -152,7 +152,8 @@ public:
 
 	CodeItem* get_items() const { return mpItems; }
 
-	uint32_t size() const { return mSize; }
+	uint32_t size() const { return mNumItems;}
+	uint32_t capacity() const { return mCapacity; }
 };
 
 struct ListStack {

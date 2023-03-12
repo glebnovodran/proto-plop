@@ -254,10 +254,10 @@ bool CodeItem::is_list() const {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CodeList::init() {
 	if (mpItems) {
-		size_t sz = mSize * sizeof(CodeItem);
+		size_t sz = mCapacity * sizeof(CodeItem);
 		nxCore::mem_zero(mpItems, sz);
 	} else {
-		mSize = 0;
+		mCapacity = 0;
 	}
 	mNumItems = 0;
 }
@@ -267,7 +267,7 @@ void CodeList::reset() {
 		nxCore::mem_free(mpItems);
 		mpItems = nullptr;
 		mNumItems = 0;
-		mSize = mChunkSize;
+		mCapacity = mChunkSize;
 	}
 }
 
@@ -279,12 +279,12 @@ void CodeList::append(const CodeItem& itm) {
 	if (mpItems == nullptr) {
 		size_t sz = mChunkSize * sizeof(CodeItem);
 		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
-		mSize = mChunkSize;
+		mCapacity = mChunkSize;
 	}
-	if (mNumItems >= mSize) {
-		size_t newSz = (mSize + mChunkSize)*sizeof(CodeItem);
+	if (mNumItems >= mCapacity) {
+		size_t newSz = (mCapacity + mChunkSize)*sizeof(CodeItem);
 		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
-		mSize += mChunkSize;
+		mCapacity += mChunkSize;
 	}
 	mpItems[mNumItems++] = itm;
 }
