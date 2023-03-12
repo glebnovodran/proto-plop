@@ -132,7 +132,7 @@ CodeBlock::~CodeBlock() {
 }
 
 CodeList* CodeBlock::new_list() {
-	CodeList* pLst = &mpLists[mNumAllocList++];
+	CodeList* pLst = mNumAllocList >= ListStack::CODE_LST_MAX ? nullptr : &mpLists[mNumAllocList++];
 	return pLst;
 }
 
@@ -147,6 +147,7 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 		if (tok.id == cxXqcLexer::TokId::TOK_SEMICOLON) return false;
 		if (tok.id == cxXqcLexer::TokId::TOK_LPAREN) {
 			CodeList* pNewLst = new_list();
+			if (pNewLst == nullptr) return false;
 			pStack->push(pNewLst);
 			item.set_list(pNewLst);
 		} else if (tok.id == cxXqcLexer::TokId::TOK_RPAREN) {
@@ -161,7 +162,7 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 	} else if (tok.id == cxXqcLexer::TokId::TOK_INT) {
 		item.set_num(tok.val.i);
 	} else if ((tok.id == cxXqcLexer::TokId::TOK_QSTR) || (tok.id == cxXqcLexer::TokId::TOK_SQSTR)) {
-		char* pStr = mCtx.add_str(reinterpret_cast<char*>(tok.val.p));
+		const char* pStr = mCtx.add_str(reinterpret_cast<const char*>(tok.val.p));
 		item.set_str(pStr);
 	}
 
