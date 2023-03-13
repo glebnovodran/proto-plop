@@ -14,10 +14,12 @@ protected:
 	size_t mLineBufSize;
 
 	size_t mCur;
+	size_t mLineNo;
 public:
 	struct Line {
 		const char* pText;
 		size_t textSize;
+		size_t no;
 
 		bool valid() const;
 
@@ -30,7 +32,8 @@ public:
 	mSrcSize(srcSize),
 	mpLineBuf(nullptr),
 	mLineBufSize(0),
-	mCur(0)
+	mCur(0),
+	mLineNo(0)
 	{
 		mChunkSize = nxCalc::clamp(cnkSize, (size_t)(16), (size_t)(1024 * 1024));
 	}

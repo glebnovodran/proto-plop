@@ -1,6 +1,48 @@
 #include "crosscore.hpp"
 #include "pint.hpp"
 
+#if 1
+#define FMT_ESC(_code_) "\x1B[" #_code_ "m"
+#else
+#define FMT_ESC(_code_) ""
+#endif
+
+#define FMT_BOLD FMT_ESC(1)
+#define FMT_UNDER FMT_ESC(4)
+#define FMT_BLACK FMT_ESC(30)
+#define FMT_BLACK_BG FMT_ESC(40)
+#define FMT_RED FMT_ESC(31)
+#define FMT_RED_BG FMT_ESC(41)
+#define FMT_GREEN FMT_ESC(32)
+#define FMT_GREEN_BG FMT_ESC(42)
+#define FMT_YELLOW FMT_ESC(33)
+#define FMT_YELLOW_BG FMT_ESC(43)
+#define FMT_BLUE FMT_ESC(34)
+#define FMT_BLUE_BG FMT_ESC(44)
+#define FMT_MAGENTA FMT_ESC(35)
+#define FMT_MAGENTA_BG FMT_ESC(45)
+#define FMT_CYAN FMT_ESC(36)
+#define FMT_CYAN_BG FMT_ESC(46)
+#define FMT_WHITE FMT_ESC(37)
+#define FMT_WHITE_BG FMT_ESC(47)
+#define FMT_GRAY FMT_ESC(90)
+#define FMT_GRAY_BG FMT_ESC(100)
+#define FMT_B_RED FMT_ESC(91)
+#define FMT_B_RED_BG FMT_ESC(101)
+#define FMT_B_GREEN FMT_ESC(92)
+#define FMT_B_GREEN_BG FMT_ESC(102)
+#define FMT_B_YELLOW FMT_ESC(93)
+#define FMT_B_YELLOW_BG FMT_ESC(103)
+#define FMT_B_BLUE FMT_ESC(94)
+#define FMT_B_BLUE_BG FMT_ESC(104)
+#define FMT_B_MAGENTA FMT_ESC(95)
+#define FMT_B_MAGENTA_BG FMT_ESC(105)
+#define FMT_B_CYAN FMT_ESC(96)
+#define FMT_B_CYAN_BG FMT_ESC(106)
+#define FMT_B_WHITE FMT_ESC(97)
+#define FMT_B_WHITE_BG FMT_ESC(107)
+#define FMT_OFF FMT_ESC(0)
+
 namespace Pint {
 
 void interp(const char* pSrcPath) {
@@ -34,13 +76,16 @@ void interp(const char* pSrcPath) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SrcCode::Line::print() const {
+	nxCore::dbg_msg(FMT_BOLD "line %d: " FMT_OFF, no);
 	if (valid()) {
+		nxCore::dbg_msg(FMT_GREEN);
 		for (size_t i = 0; i < textSize; ++i) {
 			nxCore::dbg_msg("%c", pText[i]);
 		}
-		nxCore::dbg_msg("\n");
+		//nxCore::dbg_msg("\n");
+		nxCore::dbg_msg(FMT_OFF "\n");
 	} else {
-		nxCore::dbg_msg("invalid\n");
+		nxCore::dbg_msg(FMT_RED "invalid\n" FMT_OFF);
 	}
 }
 
@@ -55,6 +100,9 @@ bool SrcCode::eof() const {
 }
 
 SrcCode::Line SrcCode::get_line() {
+	SrcCode::Line line = {0};
+	if (mpSrc == nullptr) return line;
+
 	if (mpLineBuf == nullptr) {
 		mpLineBuf = reinterpret_cast<char*>(nxCore::mem_alloc(mChunkSize));
 		mLineBufSize = mChunkSize;
@@ -63,6 +111,11 @@ SrcCode::Line SrcCode::get_line() {
 	size_t lineStart = mCur;
 	size_t skipped = 0;
 	size_t linePos = 0;
+
+	if (!eof()) {
+		++mLineNo;
+	}
+
 	while (!eof()) {
 		linePos = (mCur - skipped) - lineStart;
 		if (linePos >= mLineBufSize) {
@@ -82,7 +135,10 @@ SrcCode::Line SrcCode::get_line() {
 		}
 	}
 
-	SrcCode::Line line = {mpLineBuf, linePos};
+	line.pText = mpLineBuf;
+	line.textSize = linePos;
+	line.no = mLineNo;
+
 	return line;
 }
 
@@ -191,14 +247,14 @@ void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
 	for (uint32_t i = 0; i < sz; ++i) {
 		const CodeItem& item = pItems[i];
 		if (item.is_list()) {
-			nxCore::dbg_msg("%*c- LST %p\n", lvl, ' ', item.val.pLst);
+			nxCore::dbg_msg("%*c" FMT_B_BLUE "- LST" FMT_OFF " %p\n", lvl, ' ', item.val.pLst);
 			print_sub(item.val.pLst, lvl+1);
 		} else if (item.is_num()) {
-			nxCore::dbg_msg("%*cNUM %f\n", lvl, ' ', item.val.num);
+			nxCore::dbg_msg("%*c" FMT_B_GREEN "NUM" FMT_OFF " %f\n", lvl, ' ', item.val.num);
 		} else if (item.is_sym()) {
-			nxCore::dbg_msg("%*cSYM %s\n", lvl, ' ', item.val.sym);
+			nxCore::dbg_msg("%*c" FMT_B_GREEN "SYM" FMT_OFF " %s\n", lvl, ' ', item.val.sym);
 		} else if (item.is_str()) {
-			nxCore::dbg_msg("%*cSTR \"%s\"\n", lvl, ' ', item.val.pStr);
+			nxCore::dbg_msg("%*c" FMT_B_GREEN "STR" FMT_B_YELLOW " \"%s\"" FMT_OFF "\n", lvl, ' ', item.val.pStr);
 		}
 	}
 }
