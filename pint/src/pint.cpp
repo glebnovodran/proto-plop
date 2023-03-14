@@ -155,15 +155,39 @@ void SrcCode::reset() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ExecContext::ExecContext() {
-	mpStrs = cxStrStore::create();
+	init();
 }
 
 ExecContext::~ExecContext() {
-	cxStrStore::destroy(mpStrs);
+	reset();
+}
+
+void ExecContext::init() {
+	mpStrs = nullptr;
+	mpVarMap = VarMap::create();
+	mVarCnt = 0;
+}
+
+void ExecContext::reset() {
+	if (mpStrs) {
+		cxStrStore::destroy(mpStrs);
+		mpStrs = nullptr;
+	}
+	VarMap::destroy(mpVarMap);
+	mVarCnt = 0;
 }
 
 char* ExecContext::add_str(const char* pStr) {
-	return mpStrs != nullptr? mpStrs->add(pStr) : nullptr;
+	char* pStored = nullptr;
+	if (pStr) {
+		if (mpStrs == nullptr) {
+			mpStrs = cxStrStore::create();
+		}
+		if (mpStrs) {
+			pStored = mpStrs->add(pStr);
+		}
+	}
+	return pStored;
 }
 
 void ExecContext::print_vars() const {
@@ -193,7 +217,7 @@ CodeList* CodeBlock::new_list() {
 }
 
 bool CodeBlock::operator()(const cxLexer::Token& tok) {
-	CodeItem item;
+	Value item;
 	item.set_none();
 
 	ListStack* pStack = get_stack();
@@ -242,10 +266,10 @@ void CodeBlock::eval() {
 }
 
 void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
-	CodeItem* pItems = pLst->get_items();
-	uint32_t sz = pLst->size();
+	Value* pItems = pLst->get_items();
+	uint32_t sz = pLst->count();
 	for (uint32_t i = 0; i < sz; ++i) {
-		const CodeItem& item = pItems[i];
+		const Value& item = pItems[i];
 		if (item.is_list()) {
 			nxCore::dbg_msg("%*c" FMT_B_BLUE "- LST" FMT_OFF " %p\n", lvl, ' ', item.val.pLst);
 			print_sub(item.val.pLst, lvl+1);
@@ -266,64 +290,64 @@ void CodeBlock::print() const {
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void CodeItem::set_none() {
+void Value::set_none() {
 	kind = Kind::NON;
 	val.num = 0;
 }
-bool CodeItem::is_none() const {
+bool Value::is_none() const {
 	return kind == Kind::NON;
 }
 
-void CodeItem::set_sym(const char* pStr) {
+void Value::set_sym(const char* pStr) {
 	kind = Kind::SYM;
-	size_t sz = nxCalc::clamp(nxCore::str_len(pStr), size_t(0), CodeItem::SYM_MAX_LEN);
+	size_t sz = nxCalc::clamp(nxCore::str_len(pStr), size_t(0), Value::SYM_MAX_LEN);
 	nxCore::mem_copy(val.sym, pStr, sz);
 	val.sym[sz] = '\x0';
 }
-bool CodeItem::is_sym() const {
+bool Value::is_sym() const {
 	return kind == Kind::SYM;
 }
 
-void CodeItem::set_num(double num) {
+void Value::set_num(double num) {
 	kind = Kind::NUM;
 	val.num = num;
 }
-bool CodeItem::is_num() const {
+bool Value::is_num() const {
 	return kind == Kind::NUM;
 }
 
-void CodeItem::set_str(const char* pStr) {
+void Value::set_str(const char* pStr) {
 	kind = Kind::STR;
 	val.pStr = pStr;
 }
-bool CodeItem::is_str() const {
+bool Value::is_str() const {
 	return kind == Kind::STR;
 }
 
-void CodeItem::set_list(CodeList* pLst) {
+void Value::set_list(CodeList* pLst) {
 	kind = Kind::LST;
 	val.pLst = pLst;
 }
-bool CodeItem::is_list() const {
+bool Value::is_list() const {
 	return kind == Kind::LST;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CodeList::init() {
 	if (mpItems) {
-		size_t sz = mCapacity * sizeof(CodeItem);
+		size_t sz = mCapacity * sizeof(Value);
 		nxCore::mem_zero(mpItems, sz);
 	} else {
 		mCapacity = 0;
 	}
-	mNumItems = 0;
+	mCount = 0;
 }
 
 void CodeList::reset() {
 	if (mpItems) {
 		nxCore::mem_free(mpItems);
 		mpItems = nullptr;
-		mNumItems = 0;
+		mCount = 0;
 		mCapacity = mChunkSize;
 	}
 }
@@ -332,18 +356,18 @@ bool CodeList::valid() const {
 	return (mpItems != nullptr);
 }
 
-void CodeList::append(const CodeItem& itm) {
+void CodeList::append(const Value& itm) {
 	if (mpItems == nullptr) {
-		size_t sz = mChunkSize * sizeof(CodeItem);
-		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
+		size_t sz = mChunkSize * sizeof(Value);
+		mpItems = reinterpret_cast<Value*>(nxCore::mem_alloc(sz));
 		mCapacity = mChunkSize;
 	}
-	if (mNumItems >= mCapacity) {
-		size_t newSz = (mCapacity + mChunkSize)*sizeof(CodeItem);
-		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
+	if (mCount >= mCapacity) {
+		size_t newSz = (mCapacity + mChunkSize)*sizeof(Value);
+		mpItems = reinterpret_cast<Value*>(nxCore::mem_realloc(mpItems, newSz));
 		mCapacity += mChunkSize;
 	}
-	mpItems[mNumItems++] = itm;
+	mpItems[mCount++] = itm;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,6 +1,6 @@
 namespace Pint {
 
-struct CodeItem;
+
 class CodeList;
 struct ListStack;
 
@@ -45,13 +45,59 @@ public:
 	Line get_line();
 };
 
+struct Value {
+	static const size_t SYM_MAX_LEN = 63;
+
+	enum class Kind : uint32_t {
+		NON = 0,
+		SYM,
+		NUM,
+		STR,
+		LST
+	};
+
+	union {
+		char sym[SYM_MAX_LEN+1];
+		const char* pStr;
+		CodeList* pLst;
+		double num;
+	} val;
+
+	Kind kind;
+
+	void set_none();
+	bool is_none() const;
+
+	void set_sym(const char* pStr);
+	bool is_sym() const;
+
+	void set_num(double num);
+	bool is_num() const;
+
+	void set_str(const char* pStr);
+	bool is_str() const;
+
+	void set_list(CodeList* pLst);
+	bool is_list() const;
+};
+
 class ExecContext {
 protected:
+	typedef cxStrMap<int> VarMap;
+	static const size_t CODE_VAR_MAX = 256;
 	cxStrStore* mpStrs;
+	VarMap* mpVarMap;
+	Value mVarVals[CODE_VAR_MAX];
+	const char* mpVarNames[CODE_VAR_MAX];
+	uint32_t mVarCnt;
+
 public:
+
 	ExecContext();
 
 	~ExecContext();
+
+	void init();
 
 	void reset();
 
@@ -89,54 +135,18 @@ public:
 	void print() const;
 };
 
-struct CodeItem {
-	static const size_t SYM_MAX_LEN = 63;
-
-	enum class Kind : uint32_t {
-		NON = 0,
-		SYM,
-		NUM,
-		STR,
-		LST
-	};
-
-	union {
-		char sym[SYM_MAX_LEN+1];
-		const char* pStr;
-		CodeList* pLst;
-		double num;
-	} val;
-
-	Kind kind;
-
-	void set_none();
-	bool is_none() const;
-
-	void set_sym(const char* pStr);
-	bool is_sym() const;
-
-	void set_num(double num);
-	bool is_num() const;
-
-	void set_str(const char* pStr);
-	bool is_str() const;
-
-	void set_list(CodeList* pLst);
-	bool is_list() const;
-};
-
 class CodeList {
 protected:
-	CodeItem* mpItems;
+	Value* mpItems;
 	uint32_t mChunkSize;
-	uint32_t mNumItems;
+	uint32_t mCount;
 	uint32_t mCapacity;
 public:
 	CodeList(const uint32_t chunkSize = 2)
 	:
 	mpItems(nullptr),
 	mChunkSize(chunkSize),
-	mNumItems(0)
+	mCount(0)
 	{
 		init();
 	}
@@ -151,11 +161,11 @@ public:
 
 	bool valid() const;
 
-	void append(const CodeItem& itm);
+	void append(const Value& itm);
 
-	CodeItem* get_items() const { return mpItems; }
+	Value* get_items() const { return mpItems; }
 
-	uint32_t size() const { return mNumItems;}
+	uint32_t count() const { return mCount;}
 	uint32_t capacity() const { return mCapacity; }
 };
 
