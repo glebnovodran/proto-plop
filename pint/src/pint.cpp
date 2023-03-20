@@ -68,6 +68,7 @@ void interp(const char* pSrcPath) {
 			blk.reset();
 		}
 	}
+	ctx.print_vars();
 
 	src.reset();
 	nxCore::bin_unload(pSrc);
@@ -152,6 +153,31 @@ void SrcCode::reset() {
 		mSrcSize = 0;
 	}
 }
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void Value::set_none() {
+	kind = Kind::NON;
+	val.num = 0;
+}
+bool Value::is_none() const {
+	return kind == Kind::NON;
+}
+
+void Value::set_num(double num) {
+	kind = Kind::NUM;
+	val.num = num;
+}
+bool Value::is_num() const {
+	return kind == Kind::NUM;
+}
+
+void Value::set_str(const char* pStr) {
+	kind = Kind::STR;
+	val.pStr = pStr;
+}
+bool Value::is_str() const {
+	return kind == Kind::STR;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ExecContext::ExecContext() {
@@ -166,6 +192,7 @@ void ExecContext::init() {
 	mpStrs = nullptr;
 	mpVarMap = VarMap::create();
 	mVarCnt = 0;
+	mErrCode = EvalError::NONE;
 }
 
 void ExecContext::reset() {
@@ -175,6 +202,7 @@ void ExecContext::reset() {
 	}
 	VarMap::destroy(mpVarMap);
 	mVarCnt = 0;
+	mErrCode = EvalError::NONE;
 }
 
 char* ExecContext::add_str(const char* pStr) {
@@ -190,14 +218,80 @@ char* ExecContext::add_str(const char* pStr) {
 	return pStored;
 }
 
-void ExecContext::print_vars() const {
-	// . . .
+int ExecContext::add_var(const char* pName) {
+	int id = -1;
+
+	if (pName && mpVarMap) {
+		if (mVarCnt < CODE_VAR_MAX) {
+			const char* pVarName = add_str(pName);
+			if (pVarName) {
+				pVarName = mpVarMap->add(pVarName, mVarCnt);
+				if (pVarName) {
+					id = mVarCnt;
+					mpVarNames[id] = pVarName;
+					mVarVals[id].set_none();
+					++mVarCnt;
+				}
+			}
+		}
+	}
+
+	return id;
 }
 
+int ExecContext::find_var(const char* pName) const {
+	int id = -1;
+	if (pName && mpVarMap) {
+		int foundId = -1;
+		bool found = mpVarMap->get(pName, &foundId);
+		if (found) {
+			id = foundId;
+		}
+	}
+	return id;
+}
+
+Value* ExecContext::var_val(int id) {
+	Value* pVal = nullptr;
+	if ((id >= 0) && (id < CODE_VAR_MAX)) {
+		pVal = &mVarVals[id];
+	}
+	return pVal;
+}
+
+void ExecContext::print_vars() {
+	nxCore::dbg_msg(FMT_BOLD "%d" FMT_OFF " variables\n", mVarCnt);
+	for (uint32_t i = 0; i < mVarCnt; ++i) {
+		const char* pVarName = mpVarNames[i];
+		int varId = find_var(pVarName);
+		nxCore::dbg_msg(FMT_BOLD "[%d]" FMT_OFF FMT_B_BLUE " %s" FMT_OFF ": ", varId, pVarName);
+		Value* pVal = var_val(varId);
+		if (pVal) {
+			if (pVal->is_str()) {
+				nxCore::dbg_msg(FMT_B_YELLOW "\"%s\"" FMT_OFF, pVal->val.pStr);
+			} else if (pVal->is_num()) {
+				nxCore::dbg_msg("%f", pVal->val.num);
+			} else {
+				nxCore::dbg_msg("--");
+			}
+		} else {
+
+		}
+		nxCore::dbg_msg("\n");
+	}
+}
+
+void ExecContext::set_error(const EvalError errCode) {
+	mErrCode = errCode;
+}
+
+EvalError ExecContext::get_error() const { return mErrCode; }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void CodeBlock::reset() {
 	mpListStack->reset();
-	mNumAllocList = 0;
+	mListCnt = 0;
 }
 
 CodeBlock::CodeBlock(ExecContext& ctx) : mCtx(ctx) {
@@ -212,26 +306,25 @@ CodeBlock::~CodeBlock() {
 }
 
 CodeList* CodeBlock::new_list() {
-	CodeList* pLst = mNumAllocList >= ListStack::CODE_LST_MAX ? nullptr : &mpLists[mNumAllocList++];
+	CodeList* pLst = mListCnt >= ListStack::CODE_LST_MAX ? nullptr : &mpLists[mListCnt++];
 	return pLst;
 }
 
 bool CodeBlock::operator()(const cxLexer::Token& tok) {
-	Value item;
+	CodeItem item;
 	item.set_none();
 
-	ListStack* pStack = get_stack();
-	CodeList* pTopLst = pStack->top();
+	CodeList* pTopLst = mpListStack->top();
 
 	if (tok.is_punctuation()) {
 		if (tok.id == cxXqcLexer::TokId::TOK_SEMICOLON) return false;
 		if (tok.id == cxXqcLexer::TokId::TOK_LPAREN) {
 			CodeList* pNewLst = new_list();
 			if (pNewLst == nullptr) return false;
-			pStack->push(pNewLst);
+			mpListStack->push(pNewLst);
 			item.set_list(pNewLst);
 		} else if (tok.id == cxXqcLexer::TokId::TOK_RPAREN) {
-			pStack->pop();
+			mpListStack->pop();
 		} else {
 			item.set_sym(tok.val.c);
 		}
@@ -255,21 +348,117 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 }
 
 void CodeBlock::parse(const SrcCode::Line& line) {
-	cxLexer lexer;
-	lexer.set_text(line.pText, line.textSize);
-	lexer.scan(*this);
+	for (int i = 0; i < ListStack::CODE_LST_MAX; ++i) {
+		mpLists[i].reset();
+	}
+	mListCnt = 0;
+	mpListStack->reset();
+	if (line.valid()) {
+		cxLexer lexer;
+		lexer.set_text(line.pText, line.textSize);
+		lexer.scan(*this);
+	}
 }
-	
+
+bool CodeBlock::eval_numeric_values(CodeList* pLst, const uint32_t org, const uint32_t slice, Value* pValues) {
+	bool res = true;
+	if (pValues) {
+		for (uint32_t i = 0; i < slice; ++i) {
+			pValues[i] = eval_sub(pLst, org + i, 1);
+			if (!pValues[i].is_num()) {
+				res = false;
+				break;
+			}
+		}
+	}
+	return res;
+}
+
+Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t slice) {
+	Value val;
+	val.set_none();
+
+	if (!pLst || mCtx.get_error() != EvalError::NONE) return val;
+
+	uint32_t cnt = pLst->count();
+	if (slice > 0) {
+		cnt = org + slice;
+	}
+	if (cnt == 0) return val;
+	CodeItem* pLstItems = pLst->get_items();
+	for (uint32_t i = org; i < cnt; ++i) {
+		CodeItem* pItem = &pLstItems[i];
+		if (pItem->is_list()) {
+			val = eval_sub(pItem->val.pLst);
+		} else if (pItem->is_sym()) {
+			if (nxCore::str_eq(pItem->val.sym, "defvar")) {
+				if (i + 1 < cnt) {
+					CodeItem* pVarNameItem = pItem + 1;
+					if (pVarNameItem->is_sym()) {
+						const char* pVarName = pVarNameItem->val.sym;
+						int varId = mCtx.add_var(pVarName);
+						if (varId >= 0) {
+							if (i + 2 < cnt) {
+								val = eval_sub(pLst, 2);
+								i += 2;
+								Value* pVarVal = mCtx.var_val(varId);
+								if (pVarVal) {
+									*pVarVal = val;
+								}
+							}
+						} else {
+							mCtx.set_error(EvalError::VAR_CTX_ADD);
+						}
+					} else {
+						mCtx.set_error(EvalError::VAR_SYM);
+					}
+				} else {
+					mCtx.set_error(EvalError::VAR_SYM);
+				}
+			} else if (nxCore::str_eq(pItem->val.sym, "set")) {
+				// ...
+			} else if (nxCore::str_eq(pItem->val.sym, "+")) {
+				Value v[2];
+				if (i + 2 < cnt) {
+					if (eval_numeric_values(pLst, 1, 2, v)) {
+						val.set_num(v[0].val.num + v[1].val.num);
+					} else {
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE);
+					}
+				} else {
+					mCtx.set_error(EvalError::BAD_OPERAND_NUMBER);
+				}
+			} else if (nxCore::str_eq(pItem->val.sym, "*")) {
+				Value v[2];
+				if (i + 2 < cnt) {
+					if (eval_numeric_values(pLst, 1, 2, v)) {
+						val.set_num(v[0].val.num * v[1].val.num);
+					} else {
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE);
+					}
+				} else {
+					mCtx.set_error(EvalError::BAD_OPERAND_NUMBER);
+				}
+			}
+		} else if (pItem->is_num()) {
+				val.set_num(pItem->val.num);
+		} else if (pItem->is_str()) {
+			val.set_str(pItem->val.pStr);
+		}
+	}
+	return val;
+}
+
 void CodeBlock::eval() {
-	// . . .
-	get_stack()->reset();
+	mCtx.set_error(EvalError::NONE);
+	eval_sub(&mpLists[0]);
 }
 
 void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
-	Value* pItems = pLst->get_items();
+	CodeItem* pItems = pLst->get_items();
 	uint32_t sz = pLst->count();
 	for (uint32_t i = 0; i < sz; ++i) {
-		const Value& item = pItems[i];
+		const CodeItem& item = pItems[i];
 		if (item.is_list()) {
 			nxCore::dbg_msg("%*c" FMT_B_BLUE "- LST" FMT_OFF " %p\n", lvl, ' ', item.val.pLst);
 			print_sub(item.val.pLst, lvl+1);
@@ -284,55 +473,57 @@ void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
 }
 
 void CodeBlock::print() const {
-	if (mNumAllocList == 0) return;
-	nxCore::dbg_msg("# lists: %d\n", mNumAllocList);
+	if (mListCnt == 0) return;
+	nxCore::dbg_msg("# lists: %d\n", mListCnt);
 	print_sub(mpLists, 1);
 }
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Value::set_none() {
+void CodeItem::set_none() {
 	kind = Kind::NON;
 	val.num = 0;
 }
-bool Value::is_none() const {
+bool CodeItem::is_none() const {
 	return kind == Kind::NON;
 }
 
-void Value::set_sym(const char* pStr) {
+void CodeItem::set_sym(const char* pStr) {
 	kind = Kind::SYM;
 	size_t sz = nxCalc::clamp(nxCore::str_len(pStr), size_t(0), Value::SYM_MAX_LEN);
 	nxCore::mem_copy(val.sym, pStr, sz);
 	val.sym[sz] = '\x0';
 }
-bool Value::is_sym() const {
+bool CodeItem::is_sym() const {
 	return kind == Kind::SYM;
 }
 
-void Value::set_num(double num) {
+void CodeItem::set_num(double num) {
 	kind = Kind::NUM;
 	val.num = num;
 }
-bool Value::is_num() const {
+bool CodeItem::is_num() const {
 	return kind == Kind::NUM;
 }
 
-void Value::set_str(const char* pStr) {
+void CodeItem::set_str(const char* pStr) {
 	kind = Kind::STR;
 	val.pStr = pStr;
 }
-bool Value::is_str() const {
+bool CodeItem::is_str() const {
 	return kind == Kind::STR;
 }
 
-void Value::set_list(CodeList* pLst) {
+void CodeItem::set_list(CodeList* pLst) {
 	kind = Kind::LST;
 	val.pLst = pLst;
 }
-bool Value::is_list() const {
+bool CodeItem::is_list() const {
 	return kind == Kind::LST;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 void CodeList::init() {
 	if (mpItems) {
 		size_t sz = mCapacity * sizeof(Value);
@@ -356,15 +547,15 @@ bool CodeList::valid() const {
 	return (mpItems != nullptr);
 }
 
-void CodeList::append(const Value& itm) {
+void CodeList::append(const CodeItem& itm) {
 	if (mpItems == nullptr) {
-		size_t sz = mChunkSize * sizeof(Value);
-		mpItems = reinterpret_cast<Value*>(nxCore::mem_alloc(sz));
+		size_t sz = mChunkSize * sizeof(CodeItem);
+		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
 		mCapacity = mChunkSize;
 	}
 	if (mCount >= mCapacity) {
-		size_t newSz = (mCapacity + mChunkSize)*sizeof(Value);
-		mpItems = reinterpret_cast<Value*>(nxCore::mem_realloc(mpItems, newSz));
+		size_t newSz = (mCapacity + mChunkSize)*sizeof(CodeItem);
+		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
 		mCapacity += mChunkSize;
 	}
 	mpItems[mCount++] = itm;
