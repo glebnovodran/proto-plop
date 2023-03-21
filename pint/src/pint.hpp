@@ -76,8 +76,10 @@ enum class EvalError : int32_t {
 	BAD_DEFVAR = 1,         // bad defvar clause structure
 	VAR_SYM = 2,            // variable name should be a symbol
 	VAR_CTX_ADD = 3,        // can't add variable to the exec context
-	BAD_OPERAND_NUMBER = 4,  // invalid operand type in calculation
-	BAD_OPERAND_TYPE = 5    // invalid operand type in calculation
+	BAD_OPERAND_COUNT = 4,  // invalid operand type in calculation
+	BAD_OPERAND_TYPE_NUM = 5,    // invalid operand type: NUM expected
+	BAD_OPERAND_TYPE_SYM = 6,    // invalid operand type : SYM expected
+	BAD_OPERAND_TYPE_STR = 7,    // invalid operand type : STR expected
 };
 
 class ExecContext {
@@ -110,6 +112,7 @@ public:
 
 	void set_error(const EvalError errCode);
 	EvalError get_error() const;
+	void print_error() const;
 };
 
 class CodeBlock : public cxLexer::TokenFunc {

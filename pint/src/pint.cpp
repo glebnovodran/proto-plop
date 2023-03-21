@@ -65,6 +65,10 @@ void interp(const char* pSrcPath) {
 			blk.parse(line);
 			blk.print();
 			blk.eval();
+			EvalError err = ctx.get_error();
+			if (err != EvalError::NONE) {
+				ctx.print_error();
+			}
 			blk.reset();
 		}
 	}
@@ -287,6 +291,36 @@ void ExecContext::set_error(const EvalError errCode) {
 
 EvalError ExecContext::get_error() const { return mErrCode; }
 
+void ExecContext::print_error() const {
+	nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF);
+	switch(mErrCode) {
+		case EvalError::BAD_DEFVAR:
+			nxCore::dbg_msg("Invalid variable definition clause.\n");
+			break;
+		case EvalError::VAR_SYM:
+			nxCore::dbg_msg("SYM type expected for a variable name.\n");
+			break;
+		case EvalError::VAR_CTX_ADD:
+			nxCore::dbg_msg("Error adding variable to the context.\n");
+			break;
+		case EvalError::BAD_OPERAND_COUNT:
+			nxCore::dbg_msg("A numeric operand expected.\n");
+			break;
+		case EvalError::BAD_OPERAND_TYPE_NUM:
+			nxCore::dbg_msg("A numeric value expected.\n");
+			break;
+		case EvalError::BAD_OPERAND_TYPE_SYM:
+			nxCore::dbg_msg("A symbol expected.\n");
+			break;
+		case EvalError::BAD_OPERAND_TYPE_STR:
+			nxCore::dbg_msg("A string value expected.\n");
+			break;
+
+		case EvalError::NONE:
+		default:
+			break;
+	}
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CodeBlock::reset() {
@@ -413,7 +447,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						mCtx.set_error(EvalError::VAR_SYM);
 					}
 				} else {
-					mCtx.set_error(EvalError::VAR_SYM);
+					mCtx.set_error(EvalError::BAD_DEFVAR);
 				}
 			} else if (nxCore::str_eq(pItem->val.sym, "set")) {
 				// ...
@@ -423,10 +457,23 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					if (eval_numeric_values(pLst, 1, 2, v)) {
 						val.set_num(v[0].val.num + v[1].val.num);
 					} else {
-						mCtx.set_error(EvalError::BAD_OPERAND_TYPE);
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
 					}
+					i += 2;
 				} else {
-					mCtx.set_error(EvalError::BAD_OPERAND_NUMBER);
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
+				}
+			}  else if (nxCore::str_eq(pItem->val.sym, "-")) {
+				Value v[2];
+				if (i + 2 < cnt) {
+					if (eval_numeric_values(pLst, 1, 2, v)) {
+						val.set_num(v[0].val.num - v[1].val.num);
+					} else {
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
+					}
+					i += 2;
+				} else {
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
 				}
 			} else if (nxCore::str_eq(pItem->val.sym, "*")) {
 				Value v[2];
@@ -434,10 +481,23 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					if (eval_numeric_values(pLst, 1, 2, v)) {
 						val.set_num(v[0].val.num * v[1].val.num);
 					} else {
-						mCtx.set_error(EvalError::BAD_OPERAND_TYPE);
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
 					}
+					i += 2;
 				} else {
-					mCtx.set_error(EvalError::BAD_OPERAND_NUMBER);
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
+				}
+			} else if (nxCore::str_eq(pItem->val.sym, "/")) {
+				Value v[2];
+				if (i + 2 < cnt) {
+					if (eval_numeric_values(pLst, 1, 2, v)) {
+						val.set_num(v[0].val.num / v[1].val.num);
+					} else {
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
+					}
+					i += 2;
+				} else {
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
 				}
 			}
 		} else if (pItem->is_num()) {
