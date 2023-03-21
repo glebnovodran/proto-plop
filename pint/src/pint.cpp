@@ -499,6 +499,13 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 				} else {
 					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
 				}
+			} else { // variable name
+				Value* pVal = mCtx.var_val(mCtx.find_var(pItem->val.sym));
+				if (pVal) {
+					val = *pVal;
+				} else {
+					mCtx.set_error(EvalError::VAR_NOT_FOUND);
+				}
 			}
 		} else if (pItem->is_num()) {
 				val.set_num(pItem->val.num);
