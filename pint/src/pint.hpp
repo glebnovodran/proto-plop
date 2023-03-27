@@ -116,6 +116,15 @@ public:
 	void print_error() const;
 };
 
+typedef Value (*NumOpFunc)(const Value& valA, const Value& valB);
+
+struct NumOpInfo {
+	NumOpFunc func;
+	double unaryVal;
+
+	Value apply(const Value& valA, const Value& valB);
+};
+
 class CodeBlock : public cxLexer::TokenFunc {
 protected:
 	ExecContext& mCtx;

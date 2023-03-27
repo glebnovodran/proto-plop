@@ -321,6 +321,68 @@ void ExecContext::print_error() const {
 			break;
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Value NumOpInfo::apply(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_none();
+
+	if (valA.is_num() && valB.is_num()) {
+		if (func) {
+			val = func(valA, valB);
+		}
+	}
+
+	return val;
+}
+
+static Value numop_add(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(valA.val.num + valB.val.num);
+	return val;
+}
+
+static Value numop_sub(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(valA.val.num - valB.val.num);
+	return val;
+}
+
+static Value numop_mul(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(valA.val.num * valB.val.num);
+	return val;
+}
+
+static Value numop_div(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(valA.val.num / valB.val.num);
+	return val;
+}
+
+static struct {
+	const char* pName;
+	NumOpInfo opInfo;
+} s_numOp_tbl[] = {
+	{ "+", { numop_add, 0.0 } },
+	{ "-", { numop_sub, 0.0 } },
+	{ "*", { numop_mul, 1.0 } },
+	{ "/", { numop_div, 1.0 } },
+};
+
+static bool check_numop(const char* pSym, NumOpInfo* pInfo) {
+	size_t numops = XD_ARY_LEN(s_numOp_tbl);
+	bool res = false;
+	for (size_t i = 0; i < numops; ++i) {
+		if (nxCore::str_eq(s_numOp_tbl[i].pName, pSym)) {
+			*pInfo = s_numOp_tbl[i].opInfo;
+			res = true;
+			break;
+		}
+	}
+	return res;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CodeBlock::reset() {
@@ -394,22 +456,10 @@ void CodeBlock::parse(const SrcCode::Line& line) {
 	}
 }
 
-bool CodeBlock::eval_numeric_values(CodeList* pLst, const uint32_t org, const uint32_t slice, Value* pValues) {
-	bool res = true;
-	if (pValues) {
-		for (uint32_t i = 0; i < slice; ++i) {
-			pValues[i] = eval_sub(pLst, org + i, 1);
-			if (!pValues[i].is_num()) {
-				res = false;
-				break;
-			}
-		}
-	}
-	return res;
-}
-
 Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t slice) {
+	NumOpInfo numOpInfo;
 	Value val;
+
 	val.set_none();
 
 	if (!pLst || mCtx.get_error() != EvalError::NONE) return val;
@@ -451,50 +501,11 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 				}
 			} else if (nxCore::str_eq(pItem->val.sym, "set")) {
 				// ...
-			} else if (nxCore::str_eq(pItem->val.sym, "+")) {
-				Value v[2];
+			} else if (check_numop(pItem->val.sym, &numOpInfo)) {
 				if (i + 2 < cnt) {
-					if (eval_numeric_values(pLst, 1, 2, v)) {
-						val.set_num(v[0].val.num + v[1].val.num);
-					} else {
-						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
-					}
-					i += 2;
-				} else {
-					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
-				}
-			}  else if (nxCore::str_eq(pItem->val.sym, "-")) {
-				Value v[2];
-				if (i + 2 < cnt) {
-					if (eval_numeric_values(pLst, 1, 2, v)) {
-						val.set_num(v[0].val.num - v[1].val.num);
-					} else {
-						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
-					}
-					i += 2;
-				} else {
-					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
-				}
-			} else if (nxCore::str_eq(pItem->val.sym, "*")) {
-				Value v[2];
-				if (i + 2 < cnt) {
-					if (eval_numeric_values(pLst, 1, 2, v)) {
-						val.set_num(v[0].val.num * v[1].val.num);
-					} else {
-						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
-					}
-					i += 2;
-				} else {
-					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
-				}
-			} else if (nxCore::str_eq(pItem->val.sym, "/")) {
-				Value v[2];
-				if (i + 2 < cnt) {
-					if (eval_numeric_values(pLst, 1, 2, v)) {
-						val.set_num(v[0].val.num / v[1].val.num);
-					} else {
-						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_NUM);
-					}
+					Value valA = eval_sub(pLst, 1, 1);
+					Value valB = eval_sub(pLst, 2, 1);
+					val = numOpInfo.apply(valA, valB);
 					i += 2;
 				} else {
 					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
