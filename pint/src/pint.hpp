@@ -73,7 +73,7 @@ struct Value {
 
 enum class EvalError : int32_t {
 	NONE = 0,
-	BAD_DEFVAR = 1,              // bad defvar clause structure
+	BAD_VARCLAUSE = 1,           // bad defvar/set clause structure
 	VAR_SYM = 2,                 // variable name should be a symbol
 	VAR_CTX_ADD = 3,             // can't add variable to the exec context
 	BAD_OPERAND_COUNT = 4,       // invalid operand type in calculation

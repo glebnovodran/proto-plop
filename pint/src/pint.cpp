@@ -294,7 +294,7 @@ EvalError ExecContext::get_error() const { return mErrCode; }
 void ExecContext::print_error() const {
 	nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF);
 	switch(mErrCode) {
-		case EvalError::BAD_DEFVAR:
+		case EvalError::BAD_VARCLAUSE:
 			nxCore::dbg_msg("Invalid variable definition clause.\n");
 			break;
 		case EvalError::VAR_SYM:
@@ -489,6 +489,8 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 								if (pVarVal) {
 									*pVarVal = val;
 								}
+							} else {
+								mCtx.set_error(EvalError::BAD_VARCLAUSE);
 							}
 						} else {
 							mCtx.set_error(EvalError::VAR_CTX_ADD);
@@ -497,10 +499,23 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						mCtx.set_error(EvalError::VAR_SYM);
 					}
 				} else {
-					mCtx.set_error(EvalError::BAD_DEFVAR);
+					mCtx.set_error(EvalError::BAD_VARCLAUSE);
 				}
 			} else if (nxCore::str_eq(pItem->val.sym, "set")) {
-				// ...
+				if (i + 1 < cnt) {
+					CodeItem* pVarNameItem = pItem + 1;
+					const char* pVarName = pVarNameItem->val.sym;
+					Value* pVal = mCtx.var_val(mCtx.find_var(pVarName));
+					if (pVal) {
+						if (i + 2 < cnt) {
+							val = eval_sub(pLst, 2);
+							*pVal = val;
+							i += 2;
+						}
+					} else {
+						mCtx.set_error(EvalError::VAR_NOT_FOUND);
+					}
+				}
 			} else if (check_numop(pItem->val.sym, &numOpInfo)) {
 				Value valA;
 				Value valB;
