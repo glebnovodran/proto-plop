@@ -504,18 +504,23 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 			} else if (check_numop(pItem->val.sym, &numOpInfo)) {
 				Value valA;
 				Value valB;
-				if (i + 2 == cnt) {
+				if (i + 2 > cnt) {
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
+				} else if (i + 2 == cnt) {
 					valA.set_num(numOpInfo.unaryVal);
 					valB = eval_sub(pLst, 1, 1);
 					val = numOpInfo.apply(valA, valB);
 					i += 1;
-				} else if (i + 2 < cnt) {
-					Value valA = eval_sub(pLst, 1, 1);
-					Value valB = eval_sub(pLst, 2, 1);
-					val = numOpInfo.apply(valA, valB);
-					i += 2;
 				} else {
-					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
+					val = eval_sub(pLst, 1, 1);
+					Value valA, valB;
+
+					for (int j = 2; j < cnt; ++j) {
+						valA = val;
+						Value valB = eval_sub(pLst, j, 1);
+						val = numOpInfo.apply(valA, valB);
+					}
+					i = cnt - 1;
 				}
 			} else { // variable name
 				Value* pVal = mCtx.var_val(mCtx.find_var(pItem->val.sym));
