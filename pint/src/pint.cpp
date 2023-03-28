@@ -502,7 +502,14 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 			} else if (nxCore::str_eq(pItem->val.sym, "set")) {
 				// ...
 			} else if (check_numop(pItem->val.sym, &numOpInfo)) {
-				if (i + 2 < cnt) {
+				Value valA;
+				Value valB;
+				if (i + 2 == cnt) {
+					valA.set_num(numOpInfo.unaryVal);
+					valB = eval_sub(pLst, 1, 1);
+					val = numOpInfo.apply(valA, valB);
+					i += 1;
+				} else if (i + 2 < cnt) {
 					Value valA = eval_sub(pLst, 1, 1);
 					Value valB = eval_sub(pLst, 2, 1);
 					val = numOpInfo.apply(valA, valB);
