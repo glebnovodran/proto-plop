@@ -361,6 +361,60 @@ static Value numop_div(const Value& valA, const Value& valB) {
 	return val;
 }
 
+static Value numop_logand(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(uint64_t(valA.val.num) & uint64_t(valB.val.num));
+	return val;
+}
+
+static Value numop_logxor(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(uint64_t(valA.val.num) ^ uint64_t(valB.val.num));
+	return val;
+}
+
+static Value numop_logior(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(uint64_t(valA.val.num) | uint64_t(valB.val.num));
+	return val;
+}
+
+static Value numop_eq(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(double(valA.val.num == valB.val.num));
+	return val;
+}
+
+static Value numop_neq(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(double(valA.val.num != valB.val.num));
+	return val;
+}
+
+static Value numop_gt(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(double(valA.val.num > valB.val.num));
+	return val;
+}
+
+static Value numop_ge(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(double(valA.val.num >= valB.val.num));
+	return val;
+}
+
+static Value numop_lt(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(double(valA.val.num < valB.val.num));
+	return val;
+}
+
+static Value numop_le(const Value& valA, const Value& valB) {
+	Value val;
+	val.set_num(double(valA.val.num <= valB.val.num));
+	return val;
+}
+
 static struct {
 	const char* pName;
 	NumOpInfo opInfo;
@@ -369,6 +423,15 @@ static struct {
 	{ "-", { numop_sub, 0.0 } },
 	{ "*", { numop_mul, 1.0 } },
 	{ "/", { numop_div, 1.0 } },
+	{ "logand", { numop_logand, 1.0 } },
+	{ "logxor", { numop_logxor, 0.0 } },
+	{ "logior", { numop_logior, 0.0 } },
+	{ "=", { numop_eq, 0.0 } },
+	{ "/=", { numop_neq, 0.0 } },
+	{ ">", { numop_gt, 0.0 } },
+	{ ">=", { numop_ge, 0.0 } },
+	{ "<", { numop_lt, 0.0 } },
+	{ "<=", { numop_le, 0.0 } },
 };
 
 static bool check_numop(const char* pSym, NumOpInfo* pInfo) {
