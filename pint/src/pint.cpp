@@ -315,7 +315,9 @@ void ExecContext::print_error() const {
 		case EvalError::BAD_OPERAND_TYPE_STR:
 			nxCore::dbg_msg("A string value expected.\n");
 			break;
-
+		case EvalError::VAR_NOT_FOUND:
+			nxCore::dbg_msg("Variable not found.\n");
+			break;
 		case EvalError::NONE:
 		default:
 			break;
@@ -385,7 +387,7 @@ static Value numop_eq(const Value& valA, const Value& valB) {
 	return val;
 }
 
-static Value numop_neq(const Value& valA, const Value& valB) {
+static Value numop_ne(const Value& valA, const Value& valB) {
 	Value val;
 	val.set_num(double(valA.val.num != valB.val.num));
 	return val;
@@ -427,7 +429,7 @@ static struct {
 	{ "logxor", { numop_logxor, 0.0 } },
 	{ "logior", { numop_logior, 0.0 } },
 	{ "=", { numop_eq, 0.0 } },
-	{ "/=", { numop_neq, 0.0 } },
+	{ "/=", { numop_ne, 0.0 } },
 	{ ">", { numop_gt, 0.0 } },
 	{ ">=", { numop_ge, 0.0 } },
 	{ "<", { numop_lt, 0.0 } },
@@ -579,6 +581,35 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						mCtx.set_error(EvalError::VAR_NOT_FOUND);
 					}
 				}
+			} else if (nxCore::str_eq(pItem->val.sym, "eq")) {
+				if (i + 2 < cnt) {
+					Value valA, valB;
+					valA = eval_sub(pLst, 1, 1);
+					valB = eval_sub(pLst, 2, 1);
+					i += 2;
+					if (valA.is_str() && valB.is_str()) {
+						val.set_num(double(nxCore::str_eq(valA.val.pStr, valB.val.pStr)));
+					} else {
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_STR);
+					}
+				} else {
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
+				}
+			} else if (nxCore::str_eq(pItem->val.sym, "ne")) {
+				if (i + 2 < cnt) {
+					Value valA, valB;
+					valA = eval_sub(pLst, 1, 1);
+					valB = eval_sub(pLst, 2, 1);
+					i += 2;
+					if (valA.is_str() && valB.is_str()) {
+						val.set_num(double(!nxCore::str_eq(valA.val.pStr, valB.val.pStr)));
+					} else {
+						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_STR);
+					}
+				} else {
+					mCtx.set_error(EvalError::BAD_OPERAND_COUNT);
+				}
+
 			} else if (check_numop(pItem->val.sym, &numOpInfo)) {
 				Value valA;
 				Value valB;
