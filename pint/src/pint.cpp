@@ -68,6 +68,7 @@ void interp(const char* pSrcPath) {
 			EvalError err = ctx.get_error();
 			if (err != EvalError::NONE) {
 				ctx.print_error();
+				break;
 			}
 			blk.reset();
 		}

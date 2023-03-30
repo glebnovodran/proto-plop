@@ -107,7 +107,6 @@ public:
 	int add_var(const char* pName);
 	int find_var(const char* pName) const;
 	Value* var_val(int id);
-	//int set_var(const char* pName, const Value& val);
 
 	void print_vars();
 
