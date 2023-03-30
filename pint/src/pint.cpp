@@ -547,15 +547,16 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						const char* pVarName = pVarNameItem->val.sym;
 						int varId = mCtx.add_var(pVarName);
 						if (varId >= 0) {
+							Value* pVarVal = mCtx.var_val(varId);
 							if (i + 2 < cnt) {
 								val = eval_sub(pLst, 2);
 								i += 2;
-								Value* pVarVal = mCtx.var_val(varId);
 								if (pVarVal) {
 									*pVarVal = val;
 								}
 							} else {
-								mCtx.set_error(EvalError::BAD_VARCLAUSE);
+								i += 1;
+								pVarVal->set_none();
 							}
 						} else {
 							mCtx.set_error(EvalError::VAR_CTX_ADD);
@@ -626,7 +627,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 
 					for (int j = 2; j < cnt; ++j) {
 						valA = val;
-						Value valB = eval_sub(pLst, j, 1);
+						valB = eval_sub(pLst, j, 1);
 						val = numOpInfo.apply(valA, valB);
 					}
 					i = cnt - 1;
