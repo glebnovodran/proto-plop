@@ -300,7 +300,7 @@ EvalError ExecContext::get_error() const { return mErrCode; }
 void ExecContext::print_error() const {
 	nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF);
 	switch(mErrCode) {
-		case EvalError::BAD_VARCLAUSE:
+		case EvalError::BAD_VAR_CLAUSE:
 			nxCore::dbg_msg("Invalid variable definition clause.\n");
 			break;
 		case EvalError::VAR_SYM:
@@ -323,6 +323,9 @@ void ExecContext::print_error() const {
 			break;
 		case EvalError::VAR_NOT_FOUND:
 			nxCore::dbg_msg("Variable not found.\n");
+			break;
+		case EvalError::BAD_IF_CLAUSE:
+			nxCore::dbg_msg("Missing condition expression in 'if'.\n");
 			break;
 		case EvalError::NONE:
 		default:
@@ -546,7 +549,16 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 		if (pItem->is_list()) {
 			val = eval_sub(pItem->val.pLst);
 		} else if (pItem->is_sym()) {
-			if (nxCore::str_eq(pItem->val.sym, "break")) {
+			if (nxCore::str_eq(pItem->val.sym, "if")) {
+				if (i + 1 < cnt) {
+					Value condVal = eval_sub(pLst, 1, 1);
+					int ncases = i + 3 < cnt ? 2 : i + 2 < cnt ? 1 : 0;
+					val = (condVal.val.num == 1.0)? eval_sub(pLst, 2, 1) : (ncases == 2 ? eval_sub(pLst, 3, 1) : val);
+					i += (ncases + 1);
+				} else {
+					mCtx.set_error(EvalError::BAD_IF_CLAUSE);
+				}
+			} else if (nxCore::str_eq(pItem->val.sym, "break")) {
 				mCtx.set_break();
 				return val;
 			} else if (nxCore::str_eq(pItem->val.sym, "defvar")) {
@@ -558,7 +570,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						if (varId >= 0) {
 							Value* pVarVal = mCtx.var_val(varId);
 							if (i + 2 < cnt) {
-								val = eval_sub(pLst, 2);
+								val = eval_sub(pLst, 2, 1);
 								i += 2;
 								if (pVarVal) {
 									*pVarVal = val;
@@ -574,7 +586,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						mCtx.set_error(EvalError::VAR_SYM);
 					}
 				} else {
-					mCtx.set_error(EvalError::BAD_VARCLAUSE);
+					mCtx.set_error(EvalError::BAD_VAR_CLAUSE);
 				}
 			} else if (nxCore::str_eq(pItem->val.sym, "set")) {
 				if (i + 1 < cnt) {
@@ -583,7 +595,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					Value* pVal = mCtx.var_val(mCtx.find_var(pVarName));
 					if (pVal) {
 						if (i + 2 < cnt) {
-							val = eval_sub(pLst, 2);
+							val = eval_sub(pLst, 2, 1);
 							*pVal = val;
 							i += 2;
 						}

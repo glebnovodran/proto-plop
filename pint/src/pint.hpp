@@ -73,14 +73,15 @@ struct Value {
 
 enum class EvalError : int32_t {
 	NONE = 0,
-	BAD_VARCLAUSE = 1,           // bad defvar/set clause structure
+	BAD_VAR_CLAUSE = 1,           // bad defvar/set clause structure
 	VAR_SYM = 2,                 // variable name should be a symbol
 	VAR_CTX_ADD = 3,             // can't add variable to the exec context
 	BAD_OPERAND_COUNT = 4,       // invalid operand type in calculation
 	BAD_OPERAND_TYPE_NUM = 5,    // invalid operand type: NUM expected
 	BAD_OPERAND_TYPE_SYM = 6,    // invalid operand type : SYM expected
 	BAD_OPERAND_TYPE_STR = 7,    // invalid operand type : STR expected
-	VAR_NOT_FOUND = 8            // variable not found
+	VAR_NOT_FOUND = 8,           // variable not found
+	BAD_IF_CLAUSE = 9,           // missing condition expression in if
 };
 
 class ExecContext {
