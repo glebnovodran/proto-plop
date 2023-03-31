@@ -93,6 +93,7 @@ protected:
 	const char* mpVarNames[CODE_VAR_MAX];
 	uint32_t mVarCnt;
 	EvalError mErrCode;
+	bool mBreak;
 public:
 
 	ExecContext();
@@ -109,6 +110,9 @@ public:
 	Value* var_val(int id);
 
 	void print_vars();
+
+	void set_break(const bool brk = true) { mBreak = brk; }
+	bool should_break() const { return mBreak; }
 
 	void set_error(const EvalError errCode);
 	EvalError get_error() const;

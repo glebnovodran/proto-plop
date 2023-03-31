@@ -70,6 +70,9 @@ void interp(const char* pSrcPath) {
 				ctx.print_error();
 				break;
 			}
+			if (ctx.should_break()) {
+				break;
+			}
 			blk.reset();
 		}
 	}
@@ -198,6 +201,7 @@ void ExecContext::init() {
 	mpVarMap = VarMap::create();
 	mVarCnt = 0;
 	mErrCode = EvalError::NONE;
+	mBreak = false;
 }
 
 void ExecContext::reset() {
@@ -208,6 +212,7 @@ void ExecContext::reset() {
 	VarMap::destroy(mpVarMap);
 	mVarCnt = 0;
 	mErrCode = EvalError::NONE;
+	mBreak = false;
 }
 
 char* ExecContext::add_str(const char* pStr) {
@@ -541,7 +546,10 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 		if (pItem->is_list()) {
 			val = eval_sub(pItem->val.pLst);
 		} else if (pItem->is_sym()) {
-			if (nxCore::str_eq(pItem->val.sym, "defvar")) {
+			if (nxCore::str_eq(pItem->val.sym, "break")) {
+				mCtx.set_break();
+				return val;
+			} else if (nxCore::str_eq(pItem->val.sym, "defvar")) {
 				if (i + 1 < cnt) {
 					CodeItem* pVarNameItem = pItem + 1;
 					if (pVarNameItem->is_sym()) {
