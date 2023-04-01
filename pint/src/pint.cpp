@@ -45,6 +45,15 @@
 
 namespace Pint {
 
+typedef Value (*NumOpFunc)(const Value& valA, const Value& valB);
+
+struct NumOpInfo {
+	NumOpFunc func;
+	double unaryVal;
+
+	Value apply(const Value& valA, const Value& valB);
+};
+
 void interp(const char* pSrcPath) {
 	if (!pSrcPath) return;
 	size_t srcSize = 0;
@@ -552,15 +561,25 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 			if (nxCore::str_eq(pItem->val.sym, "if")) {
 				if (i + 1 < cnt) {
 					Value condVal = eval_sub(pLst, 1, 1);
-					int ncases = i + 3 < cnt ? 2 : i + 2 < cnt ? 1 : 0;
-					val = (condVal.val.num == 1.0)? eval_sub(pLst, 2, 1) : (ncases == 2 ? eval_sub(pLst, 3, 1) : val);
-					i += (ncases + 1);
+
+					if (!!condVal.val.num) {
+						if (i + 2 < cnt) {
+							val = eval_sub(pLst, 2, 1);
+						} else {
+							mCtx.set_error(EvalError::BAD_IF_CLAUSE);
+						}
+					} else {
+						if (i + 3 < cnt) {
+							val = eval_sub(pLst, 3, 1);
+						}
+					}
+					i = cnt;
 				} else {
 					mCtx.set_error(EvalError::BAD_IF_CLAUSE);
 				}
 			} else if (nxCore::str_eq(pItem->val.sym, "break")) {
 				mCtx.set_break();
-				return val;
+				i = cnt;
 			} else if (nxCore::str_eq(pItem->val.sym, "defvar")) {
 				if (i + 1 < cnt) {
 					CodeItem* pVarNameItem = pItem + 1;
@@ -576,7 +595,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 									*pVarVal = val;
 								}
 							} else {
-								i += 1;
+								++i;
 								pVarVal->set_none();
 							}
 						} else {
@@ -611,6 +630,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					i += 2;
 					if (valA.is_str() && valB.is_str()) {
 						val.set_num(double(nxCore::str_eq(valA.val.pStr, valB.val.pStr)));
+						i = cnt;
 					} else {
 						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_STR);
 					}
@@ -625,6 +645,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					i += 2;
 					if (valA.is_str() && valB.is_str()) {
 						val.set_num(double(!nxCore::str_eq(valA.val.pStr, valB.val.pStr)));
+						i = cnt;
 					} else {
 						mCtx.set_error(EvalError::BAD_OPERAND_TYPE_STR);
 					}
@@ -641,17 +662,16 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					valA.set_num(numOpInfo.unaryVal);
 					valB = eval_sub(pLst, 1, 1);
 					val = numOpInfo.apply(valA, valB);
-					i += 1;
+					++i;
 				} else {
 					val = eval_sub(pLst, 1, 1);
-					Value valA, valB;
 
 					for (int j = 2; j < cnt; ++j) {
 						valA = val;
 						valB = eval_sub(pLst, j, 1);
 						val = numOpInfo.apply(valA, valB);
 					}
-					i = cnt - 1;
+					i = cnt;
 				}
 			} else { // variable name
 				Value* pVal = mCtx.var_val(mCtx.find_var(pItem->val.sym));
@@ -662,9 +682,13 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 				}
 			}
 		} else if (pItem->is_num()) {
-				val.set_num(pItem->val.num);
+			val.set_num(pItem->val.num);
 		} else if (pItem->is_str()) {
 			val.set_str(pItem->val.pStr);
+		}
+
+		if (mCtx.get_error() != EvalError::NONE) {
+			i = cnt;
 		}
 	}
 	return val;
