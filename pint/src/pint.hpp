@@ -112,12 +112,14 @@ public:
 
 	void print_vars();
 
-	void set_break(const bool brk = true) { mBreak = brk; }
-	bool should_break() const { return mBreak; }
+	void set_break(const bool brk = true);
+	bool should_break() const;
 
 	void set_error(const EvalError errCode);
 	EvalError get_error() const;
 	void print_error() const;
+
+	void set_mem_lock(sxLock* pLock);
 };
 
 class CodeBlock : public cxLexer::TokenFunc {
@@ -215,10 +217,10 @@ public:
 
 	void append(const CodeItem& itm);
 
-	CodeItem* get_items() const { return mpItems; }
+	CodeItem* get_items() const;
 
-	uint32_t count() const { return mCount;}
-	uint32_t capacity() const { return mCapacity; }
+	uint32_t count() const;
+	uint32_t capacity() const;
 };
 
 struct ListStack {

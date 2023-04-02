@@ -342,6 +342,17 @@ void ExecContext::print_error() const {
 	}
 }
 
+void ExecContext::set_break(const bool brk) {
+	mBreak = brk;
+}
+
+bool ExecContext::should_break() const {
+	return mBreak;
+}
+
+void ExecContext::set_mem_lock(sxLock* pLock) {
+	mpVarMap->set_mem_lock(pLock);
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Value NumOpInfo::apply(const Value& valA, const Value& valB) {
@@ -806,6 +817,17 @@ void CodeList::append(const CodeItem& itm) {
 	mpItems[mCount++] = itm;
 }
 
+CodeItem* CodeList::get_items() const {
+	return mpItems;
+}
+
+uint32_t CodeList::count() const {
+	return mCount;
+}
+
+uint32_t CodeList::capacity() const {
+	return mCapacity;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 CodeList* ListStack::top() {
