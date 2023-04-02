@@ -67,24 +67,23 @@ void interp(const char* pSrcPath) {
 	ExecContext ctx;
 	CodeBlock blk(ctx);
 
-	while (!src.eof()) {
+	while (!(src.eof() || ctx.should_break())) {
 		SrcCode::Line line = src.get_line();
 		line.print();
 		if (line.valid()) {
 			blk.parse(line);
 			blk.print();
 			blk.eval();
-			EvalError err = ctx.get_error();
-			if (err != EvalError::NONE) {
-				ctx.print_error();
-				break;
-			}
-			if (ctx.should_break()) {
-				break;
-			}
+
 			blk.reset();
 		}
 	}
+
+	EvalError err = ctx.get_error();
+	if (err != EvalError::NONE) {
+		ctx.print_error();
+	}
+
 	ctx.print_vars();
 
 	src.reset();
@@ -302,6 +301,9 @@ void ExecContext::print_vars() {
 
 void ExecContext::set_error(const EvalError errCode) {
 	mErrCode = errCode;
+	if (errCode != EvalError::NONE) {
+		set_break(true);
+	}
 }
 
 EvalError ExecContext::get_error() const { return mErrCode; }
