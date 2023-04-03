@@ -54,17 +54,10 @@ struct NumOpInfo {
 	Value apply(const Value& valA, const Value& valB);
 };
 
-void interp(const char* pSrcPath) {
-	if (!pSrcPath) return;
-	size_t srcSize = 0;
-	char* pSrc = (char*)nxCore::raw_bin_load(pSrcPath, &srcSize);
-	if (!pSrc) {
-		nxCore::dbg_msg("Pint::interp: unable to load \"%s\"\n", pSrcPath);
-		return;
-	}
+void interp(const char* pSrc, size_t srcSize, ExecContext& ctx) {
+	if (!pSrc) return;
 
 	SrcCode src(pSrc, srcSize, 32);
-	ExecContext ctx;
 	CodeBlock blk(ctx);
 
 	while (!(src.eof() || ctx.should_break())) {
@@ -87,7 +80,6 @@ void interp(const char* pSrcPath) {
 	ctx.print_vars();
 
 	src.reset();
-	nxCore::bin_unload(pSrc);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,30 +164,133 @@ void SrcCode::reset() {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Value::set_none() {
-	kind = Kind::NON;
+	type = Type::NON;
 	val.num = 0;
 }
 bool Value::is_none() const {
-	return kind == Kind::NON;
+	return type == Type::NON;
 }
 
 void Value::set_num(double num) {
-	kind = Kind::NUM;
+	type = Type::NUM;
 	val.num = num;
 }
 bool Value::is_num() const {
-	return kind == Kind::NUM;
+	return type == Type::NUM;
 }
 
 void Value::set_str(const char* pStr) {
-	kind = Kind::STR;
+	type = Type::STR;
 	val.pStr = pStr;
 }
 bool Value::is_str() const {
-	return kind == Kind::STR;
+	return type == Type::STR;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Value df_sin(const uint32_t nargs, Value* pArgs) {
+	Value res;
+	res.set_num(mth_sin(pArgs[0].val.num));
+	return res;
+}
+static const FuncDef s_df_sin_desc = {
+	"sin", df_sin, 1, Value::Type::NUM, {Value::Type::NUM}
+};
+
+Value df_cos(const uint32_t nargs, Value* pArgs) {
+	Value res;
+	res.set_num(mth_cos(pArgs[0].val.num));
+	return res;
+}
+static const FuncDef s_df_cos_desc = {
+	"cos", df_cos, 1, Value::Type::NUM, {Value::Type::NUM}
+};
+
+Value df_abs(const uint32_t nargs, Value* pArgs) {
+	Value res;
+	res.set_num(mth_fabs(pArgs[0].val.num));
+	return res;
+}
+static const FuncDef s_df_abs_desc = {
+	"abs", df_abs, 1, Value::Type::NUM, {Value::Type::NUM}
+};
+
+Value df_not(const uint32_t nargs, Value* pArgs) {
+	Value res;
+	res.set_num(double(!pArgs[0].val.num));
+	return res;
+}
+static const FuncDef s_df_not_desc = {
+	"not", df_not, 1, Value::Type::NUM, {Value::Type::NUM}
+};
+
+static const FuncDef s_defFuncDesc[] = {
+	s_df_sin_desc, s_df_cos_desc, s_df_abs_desc, s_df_not_desc
+};
+
+
+FuncMapper::FuncMapper() : mpFuncMap(nullptr) {}
+
+FuncMapper::~FuncMapper() {
+	reset();
+}
+
+void FuncMapper::init(const FuncDef* pFuncDef, uint32_t nfunc) {
+	if (pFuncDef) {
+		if (mpFuncMap == nullptr) {
+			mpFuncMap = FuncMap::create();
+		}
+
+		for (uint32_t i = 0; i < nfunc; ++i) {
+			bool res = register_func(pFuncDef[i]);
+			if (!res) {
+				nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF " cannot register function %s", pFuncDef[i].pName);
+			}
+		}
+	}
+}
+
+void FuncMapper::reset() {
+	if (mpFuncMap) {
+		FuncMap::destroy(mpFuncMap);
+		mpFuncMap = nullptr;
+	}
+}
+
+bool FuncMapper::register_func(const FuncDef& def) {
+	const char* pKey = mpFuncMap->add(def.pName, def);
+	return pKey != nullptr;
+}
+
+bool FuncMapper::find(const char* pName, FuncDef* pDef) {
+	return mpFuncMap->get(pName, pDef);
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static struct ExecCtxWk {
+	FuncMapper defFuncMapper;
+
+	void init() {
+		defFuncMapper.init(s_defFuncDesc, XD_ARY_LEN(s_defFuncDesc));
+	}
+
+	void reset() {
+		defFuncMapper.reset();
+	}
+	FuncMapper* get_def_func_mapper() {
+		return &defFuncMapper;
+	}
+} s_ctxWk;
+
+void init() {
+	s_ctxWk.init();
+}
+
+void reset() {
+	s_ctxWk.reset();
+}
+
 ExecContext::ExecContext() {
 	init();
 }
@@ -204,12 +299,13 @@ ExecContext::~ExecContext() {
 	reset();
 }
 
-void ExecContext::init() {
+void ExecContext::init(FuncMapper* pFuncMapper) {
 	mpStrs = nullptr;
 	mpVarMap = VarMap::create();
 	mVarCnt = 0;
 	mErrCode = EvalError::NONE;
 	mBreak = false;
+	mpFuncMapper = pFuncMapper ? pFuncMapper : s_ctxWk.get_def_func_mapper();
 }
 
 void ExecContext::reset() {
@@ -217,7 +313,9 @@ void ExecContext::reset() {
 		cxStrStore::destroy(mpStrs);
 		mpStrs = nullptr;
 	}
-	VarMap::destroy(mpVarMap);
+	if (mpVarMap) {
+		VarMap::destroy(mpVarMap);
+	}
 	mVarCnt = 0;
 	mErrCode = EvalError::NONE;
 	mBreak = false;
@@ -338,6 +436,9 @@ void ExecContext::print_error() const {
 		case EvalError::BAD_IF_CLAUSE:
 			nxCore::dbg_msg("Missing condition expression in 'if'.\n");
 			break;
+		case EvalError::BAD_FUNC_ARGS:
+			nxCore::dbg_msg("Bad argument number or arguments types for a function call.\n");
+			break;
 		case EvalError::NONE:
 		default:
 			break;
@@ -354,6 +455,31 @@ bool ExecContext::should_break() const {
 
 void ExecContext::set_mem_lock(sxLock* pLock) {
 	mpVarMap->set_mem_lock(pLock);
+}
+
+bool ExecContext::find_func_def(const char* pName, FuncDef* pDef) {
+	return mpFuncMapper->find(pName, pDef);
+}
+
+bool ExecContext::check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs) {
+	bool res = true;
+	if (nargs >= def.nargs) {
+		for (uint32_t i = 0; i < def.nargs; ++i) {
+			if (pArgs[i].type != def.argTypes[i]) {
+				res = false;
+				break;
+			}
+		}
+	}
+	return res;
+}
+
+bool ExecContext::register_func(const FuncDef& def) {
+	return mpFuncMapper->register_func(def);
+}
+
+void ExecContext::set_func_mapper(FuncMapper* pFuncMapper) {
+	mpFuncMapper = pFuncMapper;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -566,6 +692,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 	}
 	if (cnt == 0) return val;
 	CodeItem* pLstItems = pLst->get_items();
+	FuncDef funcDef;
 	for (uint32_t i = org; i < cnt; ++i) {
 		CodeItem* pItem = &pLstItems[i];
 		if (pItem->is_list()) {
@@ -675,6 +802,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					valA.set_num(numOpInfo.unaryVal);
 					valB = eval_sub(pLst, 1, 1);
 					val = numOpInfo.apply(valA, valB);
+
 					++i;
 				} else {
 					val = eval_sub(pLst, 1, 1);
@@ -685,6 +813,23 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 						val = numOpInfo.apply(valA, valB);
 					}
 					i = cnt;
+				}
+			} else if (mCtx.find_func_def(pItem->val.sym, &funcDef)) {
+				uint32_t n = cnt - i - 1;
+				Value args[FuncDef::MAX_ARGS];
+				uint32_t nargs = nxCalc::min(n, FuncDef::MAX_ARGS);
+
+				for(uint32_t j = 0; j < nargs; ++j) {
+					args[j] = eval_sub(pLst, i + j + 1, 1);
+					nxCore::dbg_msg("Arg %d : %f\n", j, args[j].val.num);
+				}
+
+				i += n;
+
+				if (mCtx.check_func_args(funcDef, nargs, args)) {
+					val = (*funcDef.func)(nargs, args);
+				} else {
+					mCtx.set_error(EvalError::BAD_FUNC_ARGS);
 				}
 			} else { // variable name
 				Value* pVal = mCtx.var_val(mCtx.find_var(pItem->val.sym));
@@ -739,45 +884,45 @@ void CodeBlock::print() const {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CodeItem::set_none() {
-	kind = Kind::NON;
+	type = Type::NON;
 	val.num = 0;
 }
 bool CodeItem::is_none() const {
-	return kind == Kind::NON;
+	return type == Type::NON;
 }
 
 void CodeItem::set_sym(const char* pStr) {
-	kind = Kind::SYM;
+	type = Type::SYM;
 	size_t sz = nxCalc::clamp(nxCore::str_len(pStr), size_t(0), Value::SYM_MAX_LEN);
 	nxCore::mem_copy(val.sym, pStr, sz);
 	val.sym[sz] = '\x0';
 }
 bool CodeItem::is_sym() const {
-	return kind == Kind::SYM;
+	return type == Type::SYM;
 }
 
 void CodeItem::set_num(double num) {
-	kind = Kind::NUM;
+	type = Type::NUM;
 	val.num = num;
 }
 bool CodeItem::is_num() const {
-	return kind == Kind::NUM;
+	return type == Type::NUM;
 }
 
 void CodeItem::set_str(const char* pStr) {
-	kind = Kind::STR;
+	type = Type::STR;
 	val.pStr = pStr;
 }
 bool CodeItem::is_str() const {
-	return kind == Kind::STR;
+	return type == Type::STR;
 }
 
 void CodeItem::set_list(CodeList* pLst) {
-	kind = Kind::LST;
+	type = Type::LST;
 	val.pLst = pLst;
 }
 bool CodeItem::is_list() const {
-	return kind == Kind::LST;
+	return type == Type::LST;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////

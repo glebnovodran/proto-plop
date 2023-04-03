@@ -48,7 +48,7 @@ public:
 struct Value {
 	static const size_t SYM_MAX_LEN = 63;
 
-	enum class Kind : uint32_t {
+	enum class Type : uint32_t {
 		NON = 0,
 		NUM,
 		STR
@@ -59,7 +59,7 @@ struct Value {
 		double num;
 	} val;
 
-	Kind kind;
+	Type type;
 
 	void set_none();
 	bool is_none() const;
@@ -82,14 +82,44 @@ enum class EvalError : int32_t {
 	BAD_OPERAND_TYPE_STR = 7,    // invalid operand type : STR expected
 	VAR_NOT_FOUND = 8,           // variable not found
 	BAD_IF_CLAUSE = 9,           // missing condition expression in if
+	BAD_FUNC_ARGS = 10,          // Bad argument number or arguments types for a function call
+};
+
+typedef Value (*Func)(const uint32_t nargs, Value* pArgs);
+
+struct FuncDef {
+	static const uint32_t MAX_ARGS = 10;
+	const char* pName;
+	Func func;
+	uint32_t nargs;
+	Value::Type resultType;
+	Value::Type argTypes[MAX_ARGS];
+};
+
+class FuncMapper {
+protected:
+	typedef cxStrMap<FuncDef> FuncMap;
+
+	FuncMap* mpFuncMap;
+public:
+	FuncMapper();
+	~FuncMapper();
+
+	void init(const FuncDef* pFuncDef, const uint32_t nfunc);
+	void reset();
+
+	bool register_func(const FuncDef& def);
+	bool find(const char* pName, FuncDef* pDef);
 };
 
 class ExecContext {
 protected:
 	typedef cxStrMap<int> VarMap;
 	static const size_t CODE_VAR_MAX = 256;
+
 	cxStrStore* mpStrs;
 	VarMap* mpVarMap;
+	FuncMapper* mpFuncMapper;
 	Value mVarVals[CODE_VAR_MAX];
 	const char* mpVarNames[CODE_VAR_MAX];
 	uint32_t mVarCnt;
@@ -101,7 +131,7 @@ public:
 
 	~ExecContext();
 
-	void init();
+	void init(FuncMapper* pFuncMapper = nullptr);
 	void reset();
 
 	char* add_str(const char* pStr);
@@ -120,6 +150,12 @@ public:
 	void print_error() const;
 
 	void set_mem_lock(sxLock* pLock);
+
+	bool find_func_def(const char* pName, FuncDef* pDef);
+	bool check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs);
+
+	bool register_func(const FuncDef& def);
+	void set_func_mapper(FuncMapper* pFuncMapper);
 };
 
 class CodeBlock : public cxLexer::TokenFunc {
@@ -156,7 +192,7 @@ public:
 struct CodeItem {
 	static const size_t SYM_MAX_LEN = 63;
 
-	enum class Kind : uint32_t {
+	enum class Type : uint32_t {
 		NON = 0,
 		SYM,
 		NUM,
@@ -171,7 +207,7 @@ struct CodeItem {
 		double num;
 	} val;
 
-	Kind kind;
+	Type type;
 
 	void set_none();
 	bool is_none() const;
@@ -238,6 +274,10 @@ struct ListStack {
 	CodeList* pop();
 };
 
-void interp(const char* pSrcPath);
+void init();
+
+void reset();
+
+void interp(const char* pSrc, size_t srcSize, ExecContext& ctx);
 
 } // Pint
