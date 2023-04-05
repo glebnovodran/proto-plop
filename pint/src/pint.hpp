@@ -3,6 +3,7 @@ namespace Pint {
 struct CodeItem;
 class CodeList;
 struct ListStack;
+class ExecContext;
 
 class SrcCode {
 protected:
@@ -85,7 +86,7 @@ enum class EvalError : int32_t {
 	BAD_FUNC_ARGS = 10,          // Bad argument number or arguments types for a function call
 };
 
-typedef Value (*Func)(const uint32_t nargs, Value* pArgs);
+typedef Value (*Func)(ExecContext& ctx, const uint32_t nargs, Value* pArgs);
 
 struct FuncDef {
 	static const uint32_t MAX_ARGS = 10;
@@ -105,11 +106,11 @@ public:
 	FuncMapper();
 	~FuncMapper();
 
-	void init(const FuncDef* pFuncDef, const uint32_t nfunc);
-	void reset();
-
+	bool register_func(const FuncDef* pFuncDef, const uint32_t nfunc);
 	bool register_func(const FuncDef& def);
 	bool find(const char* pName, FuncDef* pDef);
+
+	static FuncMapper* create_default();
 };
 
 class ExecContext {
@@ -120,19 +121,18 @@ protected:
 	cxStrStore* mpStrs;
 	VarMap* mpVarMap;
 	FuncMapper* mpFuncMapper;
+	void* mpBinding;
 	Value mVarVals[CODE_VAR_MAX];
 	const char* mpVarNames[CODE_VAR_MAX];
 	uint32_t mVarCnt;
 	EvalError mErrCode;
 	bool mBreak;
+	bool mCleanupMapper;
 public:
 
-	ExecContext();
+	ExecContext(void* pBinding, FuncMapper* pFuncMapper = nullptr);
 
 	~ExecContext();
-
-	void init(FuncMapper* pFuncMapper = nullptr);
-	void reset();
 
 	char* add_str(const char* pStr);
 
@@ -155,7 +155,6 @@ public:
 	bool check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs);
 
 	bool register_func(const FuncDef& def);
-	void set_func_mapper(FuncMapper* pFuncMapper);
 };
 
 class CodeBlock : public cxLexer::TokenFunc {

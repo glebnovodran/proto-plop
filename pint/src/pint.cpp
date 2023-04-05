@@ -189,7 +189,7 @@ bool Value::is_str() const {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-Value df_sin(const uint32_t nargs, Value* pArgs) {
+Value df_sin(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	res.set_num(mth_sin(pArgs[0].val.num));
 	return res;
@@ -198,7 +198,7 @@ static const FuncDef s_df_sin_desc = {
 	"sin", df_sin, 1, Value::Type::NUM, {Value::Type::NUM}
 };
 
-Value df_cos(const uint32_t nargs, Value* pArgs) {
+Value df_cos(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	res.set_num(mth_cos(pArgs[0].val.num));
 	return res;
@@ -207,7 +207,7 @@ static const FuncDef s_df_cos_desc = {
 	"cos", df_cos, 1, Value::Type::NUM, {Value::Type::NUM}
 };
 
-Value df_abs(const uint32_t nargs, Value* pArgs) {
+Value df_abs(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	res.set_num(mth_fabs(pArgs[0].val.num));
 	return res;
@@ -216,7 +216,7 @@ static const FuncDef s_df_abs_desc = {
 	"abs", df_abs, 1, Value::Type::NUM, {Value::Type::NUM}
 };
 
-Value df_not(const uint32_t nargs, Value* pArgs) {
+Value df_not(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	res.set_num(double(!pArgs[0].val.num));
 	return res;
@@ -233,29 +233,27 @@ static const FuncDef s_defFuncDesc[] = {
 FuncMapper::FuncMapper() : mpFuncMap(nullptr) {}
 
 FuncMapper::~FuncMapper() {
-	reset();
-}
-
-void FuncMapper::init(const FuncDef* pFuncDef, uint32_t nfunc) {
-	if (pFuncDef) {
-		if (mpFuncMap == nullptr) {
-			mpFuncMap = FuncMap::create();
-		}
-
-		for (uint32_t i = 0; i < nfunc; ++i) {
-			bool res = register_func(pFuncDef[i]);
-			if (!res) {
-				nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF " cannot register function %s", pFuncDef[i].pName);
-			}
-		}
-	}
-}
-
-void FuncMapper::reset() {
 	if (mpFuncMap) {
 		FuncMap::destroy(mpFuncMap);
 		mpFuncMap = nullptr;
 	}
+}
+
+bool FuncMapper::register_func(const FuncDef* pFuncDef, const uint32_t nfunc) {
+	bool res = false;
+	if (pFuncDef) {
+		if (mpFuncMap == nullptr) {
+			mpFuncMap = FuncMap::create();
+		}
+		for (uint32_t i = 0; i < nfunc; ++i) {
+			res = register_func(pFuncDef[i]);
+			if (!res) {
+				nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF " cannot register function %s", pFuncDef[i].pName);
+				break;
+			}
+		}
+	}
+	return res;
 }
 
 bool FuncMapper::register_func(const FuncDef& def) {
@@ -266,55 +264,46 @@ bool FuncMapper::register_func(const FuncDef& def) {
 bool FuncMapper::find(const char* pName, FuncDef* pDef) {
 	return mpFuncMap->get(pName, pDef);
 }
+
+FuncMapper* FuncMapper::create_default() {
+	FuncMapper* pFuncMapper = nxCore::tMem<FuncMapper>::alloc();
+	pFuncMapper->register_func(s_defFuncDesc, XD_ARY_LEN(s_defFuncDesc));
+	return pFuncMapper;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-static struct ExecCtxWk {
-	FuncMapper defFuncMapper;
+ExecContext::ExecContext(void* pBinding, FuncMapper* pFuncMapper) :
+	mpStrs(nullptr),
+	mpVarMap(nullptr),
+	mVarCnt(0),
+	mErrCode(EvalError::NONE),
+	mBreak(false),
+	mpBinding(pBinding)
+{
+	mpVarMap = VarMap::create();
 
-	void init() {
-		defFuncMapper.init(s_defFuncDesc, XD_ARY_LEN(s_defFuncDesc));
+	if (pFuncMapper) {
+		mCleanupMapper = false;
+		mpFuncMapper = pFuncMapper;
+	} else {
+		mCleanupMapper = true;
+		mpFuncMapper = FuncMapper::create_default();
 	}
-
-	void reset() {
-		defFuncMapper.reset();
-	}
-	FuncMapper* get_def_func_mapper() {
-		return &defFuncMapper;
-	}
-} s_ctxWk;
-
-void init() {
-	s_ctxWk.init();
-}
-
-void reset() {
-	s_ctxWk.reset();
-}
-
-ExecContext::ExecContext() {
-	init();
 }
 
 ExecContext::~ExecContext() {
-	reset();
-}
-
-void ExecContext::init(FuncMapper* pFuncMapper) {
-	mpStrs = nullptr;
-	mpVarMap = VarMap::create();
-	mVarCnt = 0;
-	mErrCode = EvalError::NONE;
-	mBreak = false;
-	mpFuncMapper = pFuncMapper ? pFuncMapper : s_ctxWk.get_def_func_mapper();
-}
-
-void ExecContext::reset() {
 	if (mpStrs) {
 		cxStrStore::destroy(mpStrs);
 		mpStrs = nullptr;
 	}
 	if (mpVarMap) {
 		VarMap::destroy(mpVarMap);
+	}
+	if (mCleanupMapper) {
+		if (mpFuncMapper) {
+			nxCore::tMem<FuncMapper>::free(mpFuncMapper);
+		}
 	}
 	mVarCnt = 0;
 	mErrCode = EvalError::NONE;
@@ -478,9 +467,6 @@ bool ExecContext::register_func(const FuncDef& def) {
 	return mpFuncMapper->register_func(def);
 }
 
-void ExecContext::set_func_mapper(FuncMapper* pFuncMapper) {
-	mpFuncMapper = pFuncMapper;
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 Value NumOpInfo::apply(const Value& valA, const Value& valB) {
@@ -827,7 +813,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 				i += n;
 
 				if (mCtx.check_func_args(funcDef, nargs, args)) {
-					val = (*funcDef.func)(nargs, args);
+					val = (*funcDef.func)(mCtx, nargs, args);
 				} else {
 					mCtx.set_error(EvalError::BAD_FUNC_ARGS);
 				}

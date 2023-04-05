@@ -16,6 +16,22 @@ static void init_sys() {
 static void reset_sys() {
 }
 
+static Pint::Value glb_plr_kind(Pint::ExecContext& ctx, const uint32_t nargs, Pint::Value* pArgs) {
+	Pint::Value res;
+	res.set_num(1.0);
+	int id = ctx.find_var("plr_kind");
+	if (id >= 0) {
+		Pint::Value* pVal = ctx.var_val(id);
+		pVal->set_num(42.0);
+	}
+	nxCore::dbg_msg("Calling a global function.\n");
+	return res;
+}
+
+static const Pint::FuncDef s_glb_plr_kind_desc = {
+	"glb_plr_kind", glb_plr_kind, 0, Pint::Value::Type::NUM, {}
+};
+
 int main(int argc, char* argv[]) {
 	nxApp::init_params(argc, argv);
 	init_sys();
@@ -24,7 +40,20 @@ int main(int argc, char* argv[]) {
 		nxCore::dbg_msg("pint_test <src_path>\n");
 	} else {
 		const char* pSrcPath = nxApp::get_arg(0);
-		Pint::interp(pSrcPath);
+		if (pSrcPath) {
+			size_t srcSize = 0;
+			char* pSrc = (char*)nxCore::raw_bin_load(pSrcPath, &srcSize);
+			if (pSrc) {
+				Pint::ExecContext ctx(nullptr);
+				ctx.register_func(s_glb_plr_kind_desc);
+
+				Pint::interp(pSrc, srcSize, ctx);
+
+				nxCore::bin_unload(pSrc);
+			} else {
+				nxCore::dbg_msg("Unable to load \"%s\"\n", pSrcPath);
+			}
+		}
 	}
 
 	nxApp::reset();
