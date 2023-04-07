@@ -97,20 +97,24 @@ struct FuncDef {
 	Value::Type argTypes[MAX_ARGS];
 };
 
-class FuncMapper {
+class FuncLibrary {
 protected:
 	typedef cxStrMap<FuncDef> FuncMap;
 
 	FuncMap* mpFuncMap;
 public:
-	FuncMapper();
-	~FuncMapper();
+	FuncLibrary();
+	~FuncLibrary();
 
+	void init();
+	void reset();
 	bool register_func(const FuncDef* pFuncDef, const uint32_t nfunc);
 	bool register_func(const FuncDef& def);
-	bool find(const char* pName, FuncDef* pDef);
 
-	static FuncMapper* create_default();
+	bool find(const char* pName, FuncDef* pDef);
+	bool check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs);
+
+	static FuncLibrary* create_default();
 };
 
 class ExecContext {
@@ -120,7 +124,6 @@ protected:
 
 	cxStrStore* mpStrs;
 	VarMap* mpVarMap;
-	FuncMapper* mpFuncMapper;
 	void* mpBinding;
 	Value mVarVals[CODE_VAR_MAX];
 	const char* mpVarNames[CODE_VAR_MAX];
@@ -130,7 +133,7 @@ protected:
 	bool mCleanupMapper;
 public:
 
-	ExecContext(void* pBinding, FuncMapper* pFuncMapper = nullptr);
+	ExecContext(void* pBinding = nullptr);
 
 	~ExecContext();
 
@@ -151,15 +154,14 @@ public:
 
 	void set_mem_lock(sxLock* pLock);
 
-	bool find_func_def(const char* pName, FuncDef* pDef);
-	bool check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs);
-
-	bool register_func(const FuncDef& def);
+	void set_local_binding(void* pBinding);
+	void* get_local_binding();
 };
 
 class CodeBlock : public cxLexer::TokenFunc {
 protected:
 	ExecContext& mCtx;
+	FuncLibrary* mpFuncLib;
 	ListStack* mpListStack;
 	CodeList* mpLists;
 	uint32_t mListCnt;
@@ -171,7 +173,7 @@ protected:
 	Value eval_sub(CodeList* pLst, const uint32_t org = 0, const uint32_t slice = 0);
 
 public:
-	CodeBlock(ExecContext& ctx);
+	CodeBlock(ExecContext& ctx, FuncLibrary* pFuncLib = nullptr);
 
 	~CodeBlock();
 
@@ -273,10 +275,19 @@ struct ListStack {
 	CodeList* pop();
 };
 
-void init();
+class Interpreter {
+protected:
+	ExecContext& mCtx;
+	FuncLibrary* mpFuncLib;
+public:
+	Interpreter(ExecContext& ctx, FuncLibrary* pFuncLib = nullptr);
+	~Interpreter();
 
-void reset();
+	void set_func_lib(FuncLibrary* pFuncLib);
 
-void interp(const char* pSrc, size_t srcSize, ExecContext& ctx);
+	ExecContext* get_context();
+
+	void execute(const char* pSrc, size_t srcSize);
+};
 
 } // Pint

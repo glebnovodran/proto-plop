@@ -28,8 +28,24 @@ static Pint::Value glb_plr_kind(Pint::ExecContext& ctx, const uint32_t nargs, Pi
 	return res;
 }
 
+static Pint::Value glb_plr_kind2(Pint::ExecContext& ctx, const uint32_t nargs, Pint::Value* pArgs) {
+	Pint::Value res;
+	res.set_num(1.0);
+	int id = ctx.find_var("plr_kind");
+	if (id >= 0) {
+		Pint::Value* pVal = ctx.var_val(id);
+		pVal->set_num(42.0);
+	}
+	nxCore::dbg_msg("Calling a global function kind2.\n");
+	return res;
+}
+
 static const Pint::FuncDef s_glb_plr_kind_desc = {
 	"glb_plr_kind", glb_plr_kind, 0, Pint::Value::Type::NUM, {}
+};
+
+static const Pint::FuncDef s_glb_plr_kind2_desc = {
+	"glb_plr_kind", glb_plr_kind2, 0, Pint::Value::Type::NUM, {}
 };
 
 int main(int argc, char* argv[]) {
@@ -44,10 +60,21 @@ int main(int argc, char* argv[]) {
 			size_t srcSize = 0;
 			char* pSrc = (char*)nxCore::raw_bin_load(pSrcPath, &srcSize);
 			if (pSrc) {
-				Pint::ExecContext ctx(nullptr);
-				ctx.register_func(s_glb_plr_kind_desc);
+				Pint::ExecContext ctx;
+				Pint::FuncLibrary funcLib;
+				funcLib.init();
+				funcLib.register_func(s_glb_plr_kind_desc);
+				funcLib.register_func(s_glb_plr_kind2_desc);
 
-				Pint::interp(pSrc, srcSize, ctx);
+				Pint::Interpreter interp(ctx, &funcLib);
+
+				interp.execute(pSrc, srcSize);
+				Pint::EvalError err = ctx.get_error();
+				if (err != Pint::EvalError::NONE) {
+					ctx.print_error();
+				}
+
+				interp.get_context()->print_vars();
 
 				nxCore::bin_unload(pSrc);
 			} else {

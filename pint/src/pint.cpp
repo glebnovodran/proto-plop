@@ -54,13 +54,27 @@ struct NumOpInfo {
 	Value apply(const Value& valA, const Value& valB);
 };
 
-void interp(const char* pSrc, size_t srcSize, ExecContext& ctx) {
+Interpreter::Interpreter(ExecContext& ctx, FuncLibrary* pFuncLib) :
+	mCtx(ctx),
+	mpFuncLib(pFuncLib)
+{
+}
+
+Interpreter::~Interpreter() {
+
+}
+
+ExecContext* Interpreter::get_context() {
+	return &mCtx;
+}
+
+void Interpreter::execute(const char* pSrc, size_t srcSize) {
 	if (!pSrc) return;
 
 	SrcCode src(pSrc, srcSize, 32);
-	CodeBlock blk(ctx);
+	CodeBlock blk(mCtx, mpFuncLib);
 
-	while (!(src.eof() || ctx.should_break())) {
+	while (!(src.eof() || mCtx.should_break())) {
 		SrcCode::Line line = src.get_line();
 		line.print();
 		if (line.valid()) {
@@ -71,14 +85,6 @@ void interp(const char* pSrc, size_t srcSize, ExecContext& ctx) {
 			blk.reset();
 		}
 	}
-
-	EvalError err = ctx.get_error();
-	if (err != EvalError::NONE) {
-		ctx.print_error();
-	}
-
-	ctx.print_vars();
-
 	src.reset();
 }
 
@@ -188,7 +194,7 @@ bool Value::is_str() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+//TODO rng
 Value df_sin(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	res.set_num(mth_sin(pArgs[0].val.num));
@@ -230,16 +236,27 @@ static const FuncDef s_defFuncDesc[] = {
 };
 
 
-FuncMapper::FuncMapper() : mpFuncMap(nullptr) {}
+FuncLibrary::FuncLibrary() : mpFuncMap(nullptr) {}
 
-FuncMapper::~FuncMapper() {
+FuncLibrary::~FuncLibrary() {
+	reset();
+}
+
+void FuncLibrary::init() {
+	if (mpFuncMap == nullptr) {
+		mpFuncMap = FuncMap::create();
+		register_func(s_defFuncDesc, XD_ARY_LEN(s_defFuncDesc));
+	}
+}
+
+void FuncLibrary::reset() {
 	if (mpFuncMap) {
 		FuncMap::destroy(mpFuncMap);
 		mpFuncMap = nullptr;
 	}
 }
 
-bool FuncMapper::register_func(const FuncDef* pFuncDef, const uint32_t nfunc) {
+bool FuncLibrary::register_func(const FuncDef* pFuncDef, const uint32_t nfunc) {
 	bool res = false;
 	if (pFuncDef) {
 		if (mpFuncMap == nullptr) {
@@ -256,24 +273,37 @@ bool FuncMapper::register_func(const FuncDef* pFuncDef, const uint32_t nfunc) {
 	return res;
 }
 
-bool FuncMapper::register_func(const FuncDef& def) {
-	const char* pKey = mpFuncMap->add(def.pName, def);
+bool FuncLibrary::register_func(const FuncDef& def) {
+	const char* pKey = mpFuncMap->put(def.pName, def);
 	return pKey != nullptr;
 }
 
-bool FuncMapper::find(const char* pName, FuncDef* pDef) {
+bool FuncLibrary::find(const char* pName, FuncDef* pDef) {
 	return mpFuncMap->get(pName, pDef);
 }
 
-FuncMapper* FuncMapper::create_default() {
-	FuncMapper* pFuncMapper = nxCore::tMem<FuncMapper>::alloc();
+bool FuncLibrary::check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs) {
+	bool res = true;
+	if (nargs >= def.nargs) {
+		for (uint32_t i = 0; i < def.nargs; ++i) {
+			if (pArgs[i].type != def.argTypes[i]) {
+				res = false;
+				break;
+			}
+		}
+	}
+	return res;
+}
+
+FuncLibrary* FuncLibrary::create_default() {
+	FuncLibrary* pFuncMapper = nxCore::tMem<FuncLibrary>::alloc();
 	pFuncMapper->register_func(s_defFuncDesc, XD_ARY_LEN(s_defFuncDesc));
 	return pFuncMapper;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ExecContext::ExecContext(void* pBinding, FuncMapper* pFuncMapper) :
+ExecContext::ExecContext(void* pBinding) :
 	mpStrs(nullptr),
 	mpVarMap(nullptr),
 	mVarCnt(0),
@@ -282,14 +312,6 @@ ExecContext::ExecContext(void* pBinding, FuncMapper* pFuncMapper) :
 	mpBinding(pBinding)
 {
 	mpVarMap = VarMap::create();
-
-	if (pFuncMapper) {
-		mCleanupMapper = false;
-		mpFuncMapper = pFuncMapper;
-	} else {
-		mCleanupMapper = true;
-		mpFuncMapper = FuncMapper::create_default();
-	}
 }
 
 ExecContext::~ExecContext() {
@@ -300,11 +322,7 @@ ExecContext::~ExecContext() {
 	if (mpVarMap) {
 		VarMap::destroy(mpVarMap);
 	}
-	if (mCleanupMapper) {
-		if (mpFuncMapper) {
-			nxCore::tMem<FuncMapper>::free(mpFuncMapper);
-		}
-	}
+
 	mVarCnt = 0;
 	mErrCode = EvalError::NONE;
 	mBreak = false;
@@ -446,25 +464,12 @@ void ExecContext::set_mem_lock(sxLock* pLock) {
 	mpVarMap->set_mem_lock(pLock);
 }
 
-bool ExecContext::find_func_def(const char* pName, FuncDef* pDef) {
-	return mpFuncMapper->find(pName, pDef);
+void ExecContext::set_local_binding(void* pBinding) {
+	mpBinding = pBinding;
 }
 
-bool ExecContext::check_func_args(const FuncDef& def, const uint32_t nargs, const Value* pArgs) {
-	bool res = true;
-	if (nargs >= def.nargs) {
-		for (uint32_t i = 0; i < def.nargs; ++i) {
-			if (pArgs[i].type != def.argTypes[i]) {
-				res = false;
-				break;
-			}
-		}
-	}
-	return res;
-}
-
-bool ExecContext::register_func(const FuncDef& def) {
-	return mpFuncMapper->register_func(def);
+void* ExecContext::get_local_binding() {
+	return mpBinding;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -598,7 +603,10 @@ void CodeBlock::reset() {
 	mListCnt = 0;
 }
 
-CodeBlock::CodeBlock(ExecContext& ctx) : mCtx(ctx) {
+CodeBlock::CodeBlock(ExecContext& ctx, FuncLibrary* pFuncLib) :
+	mCtx(ctx),
+	mpFuncLib(pFuncLib)
+{
 	mpListStack = nxCore::tMem<ListStack>::alloc(1, "pint:stack");
 	mpLists = nxCore::tMem<CodeList>::alloc(ListStack::CODE_LST_MAX, "pint:codelists");
 	reset();
@@ -800,7 +808,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					}
 					i = cnt;
 				}
-			} else if (mCtx.find_func_def(pItem->val.sym, &funcDef)) {
+			} else if (mpFuncLib && mpFuncLib->find(pItem->val.sym, &funcDef)) {
 				uint32_t n = cnt - i - 1;
 				Value args[FuncDef::MAX_ARGS];
 				uint32_t nargs = nxCalc::min(n, FuncDef::MAX_ARGS);
@@ -812,7 +820,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 
 				i += n;
 
-				if (mCtx.check_func_args(funcDef, nargs, args)) {
+				if (mpFuncLib->check_func_args(funcDef, nargs, args)) {
 					val = (*funcDef.func)(mCtx, nargs, args);
 				} else {
 					mCtx.set_error(EvalError::BAD_FUNC_ARGS);
