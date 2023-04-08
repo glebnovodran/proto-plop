@@ -327,10 +327,10 @@ FuncLibrary* FuncLibrary::create_default() {
 ExecContext::ExecContext(void* pBinding) :
 	mpStrs(nullptr),
 	mpVarMap(nullptr),
+	mpBinding(pBinding),
 	mVarCnt(0),
 	mErrCode(EvalError::NONE),
-	mBreak(false),
-	mpBinding(pBinding)
+	mBreak(false)
 {
 	mpVarMap = VarMap::create();
 }
@@ -822,7 +822,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 				} else {
 					val = eval_sub(pLst, 1, 1);
 
-					for (int j = 2; j < cnt; ++j) {
+					for (uint32_t j = 2; j < cnt; ++j) {
 						valA = val;
 						valB = eval_sub(pLst, j, 1);
 						val = numOpInfo.apply(valA, valB);

@@ -130,7 +130,6 @@ protected:
 	uint32_t mVarCnt;
 	EvalError mErrCode;
 	bool mBreak;
-	bool mCleanupMapper;
 public:
 
 	ExecContext(void* pBinding = nullptr);
