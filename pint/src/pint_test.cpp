@@ -66,6 +66,7 @@ int main(int argc, char* argv[]) {
 				funcLib.register_func(s_glb_plr_kind_desc);
 				funcLib.register_func(s_glb_plr_kind2_desc);
 
+				nxCore::rng_seed(1);
 				Pint::Interpreter interp(ctx, &funcLib);
 
 				interp.execute(pSrc, srcSize);

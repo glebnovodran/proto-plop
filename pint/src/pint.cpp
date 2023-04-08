@@ -231,8 +231,29 @@ static const FuncDef s_df_not_desc = {
 	"not", df_not, 1, Value::Type::NUM, {Value::Type::NUM}
 };
 
+Value glb_rng_next(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
+	Value res;
+	uint64_t rnd = nxCore::rng_next();
+	rnd &= 0xffff;
+	res.set_num(double(rnd));
+	return res;
+}
+static const FuncDef s_df_rng_next_desc = {
+	"glb_rng_next", glb_rng_next, 0, Value::Type::NUM, {Value::Type::NUM}
+};
+
+Value glb_rng_01(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
+	Value res;
+	float rnd = nxCore::rng_f01();
+	res.set_num(double(rnd));
+	return res;
+}
+static const FuncDef s_df_rng_01_desc = {
+	"glb_rng_01", glb_rng_01, 0, Value::Type::NUM, {Value::Type::NUM}
+};
+
 static const FuncDef s_defFuncDesc[] = {
-	s_df_sin_desc, s_df_cos_desc, s_df_abs_desc, s_df_not_desc
+	s_df_sin_desc, s_df_cos_desc, s_df_abs_desc, s_df_not_desc, s_df_rng_next_desc, s_df_rng_01_desc
 };
 
 
