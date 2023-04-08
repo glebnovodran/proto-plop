@@ -54,40 +54,25 @@ struct NumOpInfo {
 	Value apply(const Value& valA, const Value& valB);
 };
 
-Interpreter::Interpreter(ExecContext& ctx, FuncLibrary* pFuncLib) :
-	mCtx(ctx),
-	mpFuncLib(pFuncLib)
-{
-}
+void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib) {
+	if (pSrc && pCtx) {
+		SrcCode src(pSrc, srcSize, 32);
+		CodeBlock blk(*pCtx, pFuncLib);
 
-Interpreter::~Interpreter() {
+		while (!(src.eof() || pCtx->should_break())) {
+			SrcCode::Line line = src.get_line();
+			line.print();
+			if (line.valid()) {
+				blk.parse(line);
+				blk.print();
+				blk.eval();
 
-}
-
-ExecContext* Interpreter::get_context() {
-	return &mCtx;
-}
-
-void Interpreter::execute(const char* pSrc, size_t srcSize) {
-	if (!pSrc) return;
-
-	SrcCode src(pSrc, srcSize, 32);
-	CodeBlock blk(mCtx, mpFuncLib);
-
-	while (!(src.eof() || mCtx.should_break())) {
-		SrcCode::Line line = src.get_line();
-		line.print();
-		if (line.valid()) {
-			blk.parse(line);
-			blk.print();
-			blk.eval();
-
-			blk.reset();
+				blk.reset();
+			}
 		}
+		src.reset();
 	}
-	src.reset();
 }
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SrcCode::Line::print() const {
@@ -97,7 +82,6 @@ void SrcCode::Line::print() const {
 		for (size_t i = 0; i < textSize; ++i) {
 			nxCore::dbg_msg("%c", pText[i]);
 		}
-		//nxCore::dbg_msg("\n");
 		nxCore::dbg_msg(FMT_OFF "\n");
 	} else {
 		nxCore::dbg_msg(FMT_RED "invalid\n" FMT_OFF);
@@ -194,7 +178,7 @@ bool Value::is_str() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//TODO rng
+
 Value df_sin(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	res.set_num(mth_sin(pArgs[0].val.num));
@@ -234,7 +218,7 @@ static const FuncDef s_df_not_desc = {
 Value glb_rng_next(ExecContext& ctx, const uint32_t nargs, Value* pArgs) {
 	Value res;
 	uint64_t rnd = nxCore::rng_next();
-	rnd &= 0xffff;
+	rnd &= 0xffffffff;
 	res.set_num(double(rnd));
 	return res;
 }
@@ -324,18 +308,29 @@ FuncLibrary* FuncLibrary::create_default() {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ExecContext::ExecContext(void* pBinding) :
+ExecContext::ExecContext() :
 	mpStrs(nullptr),
 	mpVarMap(nullptr),
-	mpBinding(pBinding),
+	mpBinding(nullptr),
 	mVarCnt(0),
 	mErrCode(EvalError::NONE),
-	mBreak(false)
-{
+	mBreak(false) {}
+
+ExecContext::~ExecContext() {
+	reset();
+}
+
+void ExecContext::init(void* pBinding) {
+	mpStrs = nullptr;
+	mpBinding = pBinding;
+	mVarCnt = 0;
+	mErrCode = EvalError::NONE;
+	mBreak = false;
+
 	mpVarMap = VarMap::create();
 }
 
-ExecContext::~ExecContext() {
+void ExecContext::reset() {
 	if (mpStrs) {
 		cxStrStore::destroy(mpStrs);
 		mpStrs = nullptr;

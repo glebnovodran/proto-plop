@@ -62,20 +62,24 @@ int main(int argc, char* argv[]) {
 			if (pSrc) {
 				Pint::ExecContext ctx;
 				Pint::FuncLibrary funcLib;
+
+				ctx.init();
 				funcLib.init();
+
 				funcLib.register_func(s_glb_plr_kind_desc);
 				funcLib.register_func(s_glb_plr_kind2_desc);
 
 				nxCore::rng_seed(1);
-				Pint::Interpreter interp(ctx, &funcLib);
 
-				interp.execute(pSrc, srcSize);
+				Pint::interp(pSrc, srcSize, &ctx, &funcLib);
+
 				Pint::EvalError err = ctx.get_error();
 				if (err != Pint::EvalError::NONE) {
 					ctx.print_error();
 				}
 
-				interp.get_context()->print_vars();
+				ctx.print_vars();
+				ctx.reset();
 
 				nxCore::bin_unload(pSrc);
 			} else {

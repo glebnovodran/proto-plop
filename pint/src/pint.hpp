@@ -132,9 +132,11 @@ protected:
 	bool mBreak;
 public:
 
-	ExecContext(void* pBinding = nullptr);
-
+	ExecContext();
 	~ExecContext();
+
+	void init(void* pBinding = nullptr);
+	void reset();
 
 	char* add_str(const char* pStr);
 
@@ -274,19 +276,6 @@ struct ListStack {
 	CodeList* pop();
 };
 
-class Interpreter {
-protected:
-	ExecContext& mCtx;
-	FuncLibrary* mpFuncLib;
-public:
-	Interpreter(ExecContext& ctx, FuncLibrary* pFuncLib = nullptr);
-	~Interpreter();
-
-	void set_func_lib(FuncLibrary* pFuncLib);
-
-	ExecContext* get_context();
-
-	void execute(const char* pSrc, size_t srcSize);
-};
+void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib);
 
 } // Pint
