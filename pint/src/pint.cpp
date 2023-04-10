@@ -43,6 +43,12 @@
 #define FMT_B_WHITE_BG FMT_ESC(107)
 #define FMT_OFF FMT_ESC(0)
 
+#if defined(PINT_DBG)
+#define PINT_DBG_MSG(...) nxCore::dbg_msg(__VA_ARGS__)
+#else
+#define PINT_DBG_MSG(...)
+#endif
+
 namespace Pint {
 
 typedef Value (*NumOpFunc)(const Value& valA, const Value& valB);
@@ -76,15 +82,15 @@ void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pF
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SrcCode::Line::print() const {
-	nxCore::dbg_msg(FMT_BOLD "line %d: " FMT_OFF, no);
+	PINT_DBG_MSG(FMT_BOLD "line %d: " FMT_OFF, no);
 	if (valid()) {
-		nxCore::dbg_msg(FMT_GREEN);
+		PINT_DBG_MSG(FMT_GREEN);
 		for (size_t i = 0; i < textSize; ++i) {
-			nxCore::dbg_msg("%c", pText[i]);
+			PINT_DBG_MSG("%c", pText[i]);
 		}
-		nxCore::dbg_msg(FMT_OFF "\n");
+		PINT_DBG_MSG(FMT_OFF "\n");
 	} else {
-		nxCore::dbg_msg(FMT_RED "invalid\n" FMT_OFF);
+		PINT_DBG_MSG(FMT_RED "invalid\n" FMT_OFF);
 	}
 }
 
@@ -270,7 +276,7 @@ bool FuncLibrary::register_func(const FuncDef* pFuncDef, const uint32_t nfunc) {
 		for (uint32_t i = 0; i < nfunc; ++i) {
 			res = register_func(pFuncDef[i]);
 			if (!res) {
-				nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF " cannot register function %s", pFuncDef[i].pName);
+				PINT_DBG_MSG(FMT_BOLD FMT_RED "ERROR: " FMT_OFF " cannot register function %s", pFuncDef[i].pName);
 				break;
 			}
 		}
@@ -337,6 +343,7 @@ void ExecContext::reset() {
 	}
 	if (mpVarMap) {
 		VarMap::destroy(mpVarMap);
+		mpVarMap = nullptr;
 	}
 
 	mVarCnt = 0;
@@ -399,24 +406,24 @@ Value* ExecContext::var_val(int id) {
 }
 
 void ExecContext::print_vars() {
-	nxCore::dbg_msg(FMT_BOLD "%d" FMT_OFF " variables\n", mVarCnt);
+	PINT_DBG_MSG(FMT_BOLD "%d" FMT_OFF " variables\n", mVarCnt);
 	for (uint32_t i = 0; i < mVarCnt; ++i) {
 		const char* pVarName = mpVarNames[i];
 		int varId = find_var(pVarName);
-		nxCore::dbg_msg(FMT_BOLD "[%d]" FMT_OFF FMT_B_BLUE " %s" FMT_OFF ": ", varId, pVarName);
+		PINT_DBG_MSG(FMT_BOLD "[%d]" FMT_OFF FMT_B_BLUE " %s" FMT_OFF ": ", varId, pVarName);
 		Value* pVal = var_val(varId);
 		if (pVal) {
 			if (pVal->is_str()) {
-				nxCore::dbg_msg(FMT_B_YELLOW "\"%s\"" FMT_OFF, pVal->val.pStr);
+				PINT_DBG_MSG(FMT_B_YELLOW "\"%s\"" FMT_OFF, pVal->val.pStr);
 			} else if (pVal->is_num()) {
-				nxCore::dbg_msg("%f", pVal->val.num);
+				PINT_DBG_MSG("%f", pVal->val.num);
 			} else {
-				nxCore::dbg_msg("--");
+				PINT_DBG_MSG("--");
 			}
 		} else {
 
 		}
-		nxCore::dbg_msg("\n");
+		PINT_DBG_MSG("\n");
 	}
 }
 
@@ -430,37 +437,37 @@ void ExecContext::set_error(const EvalError errCode) {
 EvalError ExecContext::get_error() const { return mErrCode; }
 
 void ExecContext::print_error() const {
-	nxCore::dbg_msg(FMT_BOLD FMT_RED "ERROR: " FMT_OFF);
+	PINT_DBG_MSG(FMT_BOLD FMT_RED "ERROR: " FMT_OFF);
 	switch(mErrCode) {
 		case EvalError::BAD_VAR_CLAUSE:
-			nxCore::dbg_msg("Invalid variable definition clause.\n");
+			PINT_DBG_MSG("Invalid variable definition clause.\n");
 			break;
 		case EvalError::VAR_SYM:
-			nxCore::dbg_msg("SYM type expected for a variable name.\n");
+			PINT_DBG_MSG("SYM type expected for a variable name.\n");
 			break;
 		case EvalError::VAR_CTX_ADD:
-			nxCore::dbg_msg("Error adding variable to the context.\n");
+			PINT_DBG_MSG("Error adding variable to the context.\n");
 			break;
 		case EvalError::BAD_OPERAND_COUNT:
-			nxCore::dbg_msg("A numeric operand expected.\n");
+			PINT_DBG_MSG("A numeric operand expected.\n");
 			break;
 		case EvalError::BAD_OPERAND_TYPE_NUM:
-			nxCore::dbg_msg("A numeric value expected.\n");
+			PINT_DBG_MSG("A numeric value expected.\n");
 			break;
 		case EvalError::BAD_OPERAND_TYPE_SYM:
-			nxCore::dbg_msg("A symbol expected.\n");
+			PINT_DBG_MSG("A symbol expected.\n");
 			break;
 		case EvalError::BAD_OPERAND_TYPE_STR:
-			nxCore::dbg_msg("A string value expected.\n");
+			PINT_DBG_MSG("A string value expected.\n");
 			break;
 		case EvalError::VAR_NOT_FOUND:
-			nxCore::dbg_msg("Variable not found.\n");
+			PINT_DBG_MSG("Variable not found.\n");
 			break;
 		case EvalError::BAD_IF_CLAUSE:
-			nxCore::dbg_msg("Missing condition expression in 'if'.\n");
+			PINT_DBG_MSG("Missing condition expression in 'if'.\n");
 			break;
 		case EvalError::BAD_FUNC_ARGS:
-			nxCore::dbg_msg("Bad argument number or arguments types for a function call.\n");
+			PINT_DBG_MSG("Bad argument number or arguments types for a function call.\n");
 			break;
 		case EvalError::NONE:
 		default:
@@ -831,7 +838,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 
 				for(uint32_t j = 0; j < nargs; ++j) {
 					args[j] = eval_sub(pLst, i + j + 1, 1);
-					nxCore::dbg_msg("Arg %d : %f\n", j, args[j].val.num);
+					PINT_DBG_MSG("Arg %d : %f\n", j, args[j].val.num);
 				}
 
 				i += n;
@@ -873,21 +880,21 @@ void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
 	for (uint32_t i = 0; i < sz; ++i) {
 		const CodeItem& item = pItems[i];
 		if (item.is_list()) {
-			nxCore::dbg_msg("%*c" FMT_B_BLUE "- LST" FMT_OFF " %p\n", lvl, ' ', item.val.pLst);
+			PINT_DBG_MSG("%*c" FMT_B_BLUE "- LST" FMT_OFF " %p\n", lvl, ' ', item.val.pLst);
 			print_sub(item.val.pLst, lvl+1);
 		} else if (item.is_num()) {
-			nxCore::dbg_msg("%*c" FMT_B_GREEN "NUM" FMT_OFF " %f\n", lvl, ' ', item.val.num);
+			PINT_DBG_MSG("%*c" FMT_B_GREEN "NUM" FMT_OFF " %f\n", lvl, ' ', item.val.num);
 		} else if (item.is_sym()) {
-			nxCore::dbg_msg("%*c" FMT_B_GREEN "SYM" FMT_OFF " %s\n", lvl, ' ', item.val.sym);
+			PINT_DBG_MSG("%*c" FMT_B_GREEN "SYM" FMT_OFF " %s\n", lvl, ' ', item.val.sym);
 		} else if (item.is_str()) {
-			nxCore::dbg_msg("%*c" FMT_B_GREEN "STR" FMT_B_YELLOW " \"%s\"" FMT_OFF "\n", lvl, ' ', item.val.pStr);
+			PINT_DBG_MSG("%*c" FMT_B_GREEN "STR" FMT_B_YELLOW " \"%s\"" FMT_OFF "\n", lvl, ' ', item.val.pStr);
 		}
 	}
 }
 
 void CodeBlock::print() const {
 	if (mListCnt == 0) return;
-	nxCore::dbg_msg("# lists: %d\n", mListCnt);
+	PINT_DBG_MSG("# lists: %d\n", mListCnt);
 	print_sub(mpLists, 1);
 }
 
