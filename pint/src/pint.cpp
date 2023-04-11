@@ -76,7 +76,7 @@ void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pF
 				blk.reset();
 			}
 		}
-		src.reset();
+		//src.restart();
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,64 +99,56 @@ bool SrcCode::Line::valid() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+SrcCode::SrcCode(const char* pSrc, size_t srcSize, const size_t cnkSize)
+	:
+	mpSrc(pSrc),
+	mSrcSize(srcSize),
+	mSrcLoc(0),
+	mLineLoc(0),
+	mLineNo(0)
+	{}
 
 bool SrcCode::eof() const {
-	return mCur >= mSrcSize;
+	return mSrcLoc >= mSrcSize;
+}
+
+void SrcCode::restart() {
+	mSrcLoc = 0;
 }
 
 SrcCode::Line SrcCode::get_line() {
 	SrcCode::Line line = {0};
-	if (mpSrc == nullptr) return line;
 
-	if (mpLineBuf == nullptr) {
-		mpLineBuf = reinterpret_cast<char*>(nxCore::mem_alloc(mChunkSize));
-		mLineBufSize = mChunkSize;
-	}
-
-	size_t lineStart = mCur;
-	size_t skipped = 0;
-	size_t linePos = 0;
-
-	if (!eof()) {
-		++mLineNo;
-	}
-
-	while (!eof()) {
-		linePos = (mCur - skipped) - lineStart;
-		if (linePos >= mLineBufSize) {
-			mpLineBuf = reinterpret_cast<char*>(nxCore::mem_realloc(mpLineBuf, mLineBufSize + mChunkSize));
-			mLineBufSize += mChunkSize;
+	mLineLoc = mSrcLoc;
+	if (mpSrc) {
+		if (!eof()) {
+			++mLineNo;
 		}
-
-		char ch = mpSrc[mCur];
-		if (ch == '\r') {
-			skipped++;
-		} else {
-			mpLineBuf[linePos++] = ch;
-		}
-		mCur++;
-		if (ch == '\n') {
-			break;
+		while (!eof()) {
+			if (mpSrc[mSrcLoc] == '\r') {
+				++mSrcLoc;
+				if (eof()) {
+					break;
+				}
+				if (mpSrc[mSrcLoc] != '\n') {
+					break;
+				}
+			}
+			if (mpSrc[mSrcLoc] == '\n') {
+				++mSrcLoc;
+				break;
+			}
+			++mSrcLoc;
+			++line.textSize;
 		}
 	}
-
-	line.pText = mpLineBuf;
-	line.textSize = linePos;
+	if (line.textSize > 0) {
+		line.pText = &mpSrc[mLineLoc];
+	}
 	line.no = mLineNo;
-
 	return line;
 }
 
-void SrcCode::reset() {
-	if (mpLineBuf) {
-		nxCore::mem_free(mpLineBuf);
-		mpLineBuf = nullptr;
-		mLineBufSize = 0;
-		mCur = 0;
-		mpSrc = nullptr;
-		mSrcSize = 0;
-	}
-}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Value::set_none() {

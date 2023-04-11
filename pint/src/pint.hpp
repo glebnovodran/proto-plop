@@ -9,13 +9,11 @@ class SrcCode {
 protected:
 	const char* mpSrc;
 	size_t mSrcSize;
-	size_t mChunkSize;
 
-	char* mpLineBuf;
-	size_t mLineBufSize;
-
-	size_t mCur;
+	size_t mSrcLoc;
+	size_t mLineLoc;
 	size_t mLineNo;
+
 public:
 	struct Line {
 		const char* pText;
@@ -27,19 +25,11 @@ public:
 		void print() const;
 	};
 
-	SrcCode(const char* pSrc, size_t srcSize, const size_t cnkSize = 4096)
-	:
-	mpSrc(pSrc),
-	mSrcSize(srcSize),
-	mpLineBuf(nullptr),
-	mLineBufSize(0),
-	mCur(0),
-	mLineNo(0)
-	{
-		mChunkSize = nxCalc::clamp(cnkSize, (size_t)(16), (size_t)(1024 * 1024));
-	}
+	SrcCode(const char* pSrc, size_t srcSize, const size_t cnkSize = 4096);
 
-	void reset();
+	~SrcCode() {}
+
+	void restart();
 
 	bool eof() const;
 

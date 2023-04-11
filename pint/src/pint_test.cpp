@@ -48,6 +48,22 @@ static const Pint::FuncDef s_glb_plr_kind2_desc = {
 	"glb_plr_kind", glb_plr_kind2, 0, Pint::Value::Type::NUM, {}
 };
 
+Pint::Value math_fit(Pint::ExecContext& ctx, const uint32_t nargs, Pint::Value* pArgs) {
+	Pint::Value res;
+	double val = pArgs[0].val.num;
+	double oldMin = pArgs[1].val.num;
+	double oldMax = pArgs[2].val.num;
+	double newMin = pArgs[3].val.num;
+	double newMax = pArgs[4].val.num;
+	res.set_num(nxCalc::fit(val, oldMin, oldMax, newMin, newMax));
+	return res;
+}
+
+static const Pint::FuncDef s_df_math_fit_desc = {
+	"math_fit", math_fit, 5, Pint::Value::Type::NUM,
+	{Pint::Value::Type::NUM, Pint::Value::Type::NUM, Pint::Value::Type::NUM, Pint::Value::Type::NUM, Pint::Value::Type::NUM}
+};
+
 int main(int argc, char* argv[]) {
 	nxApp::init_params(argc, argv);
 	init_sys();
@@ -68,6 +84,7 @@ int main(int argc, char* argv[]) {
 
 				funcLib.register_func(s_glb_plr_kind_desc);
 				funcLib.register_func(s_glb_plr_kind2_desc);
+				funcLib.register_func(s_df_math_fit_desc);
 
 				nxCore::rng_seed(1);
 
