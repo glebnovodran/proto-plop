@@ -143,42 +143,8 @@ public:
 	EvalError get_error() const;
 	void print_error() const;
 
-	void set_mem_lock(sxLock* pLock);
-
 	void set_local_binding(void* pBinding);
 	void* get_local_binding();
-};
-
-class CodeBlock : public cxLexer::TokenFunc {
-protected:
-	ExecContext& mCtx;
-	FuncLibrary* mpFuncLib;
-	ListStack* mpListStack;
-	CodeList* mpLists;
-	uint32_t mListCnt;
-
-	void print_sub(const CodeList* lst, int lvl = 0) const;
-
-	bool eval_numeric_values(CodeList* pLst, const uint32_t org, const uint32_t slice, Value* pValues);
-
-	Value eval_sub(CodeList* pLst, const uint32_t org = 0, const uint32_t slice = 0);
-
-public:
-	CodeBlock(ExecContext& ctx, FuncLibrary* pFuncLib = nullptr);
-
-	~CodeBlock();
-
-	CodeList* new_list();
-
-	virtual bool operator()(const cxLexer::Token& tok);
-
-	void parse(const SrcCode::Line& line);
-	
-	void eval();
-
-	void reset();
-
-	void print() const;
 };
 
 struct CodeItem {
@@ -266,6 +232,42 @@ struct ListStack {
 	CodeList* pop();
 };
 
+class CodeBlock : public cxLexer::TokenFunc {
+protected:
+	ExecContext& mCtx;
+	FuncLibrary* mpFuncLib;
+	ListStack mListStack;
+	CodeList mLists[ListStack::CODE_LST_MAX];
+	uint32_t mListCnt;
+
+	void print_sub(const CodeList* lst, int lvl = 0) const;
+
+	bool eval_numeric_values(CodeList* pLst, const uint32_t org, const uint32_t slice, Value* pValues);
+
+	Value eval_sub(CodeList* pLst, const uint32_t org = 0, const uint32_t slice = 0);
+
+public:
+	CodeBlock(ExecContext& ctx, FuncLibrary* pFuncLib = nullptr);
+
+	~CodeBlock();
+
+	CodeList* new_list();
+
+	virtual bool operator()(const cxLexer::Token& tok);
+
+	void parse(const SrcCode::Line& line);
+
+	void eval();
+
+	void init();
+
+	void reset();
+
+	void print() const;
+};
+
 void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib);
+
+void set_mem_lock(sxLock* pLock);
 
 } // Pint

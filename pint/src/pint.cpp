@@ -60,10 +60,39 @@ struct NumOpInfo {
 	Value apply(const Value& valA, const Value& valB);
 };
 
+static struct MemLock {
+	sxLock* mpLock;
+
+	void acquire() {
+		if (mpLock) {
+			nxSys::lock_acquire(mpLock);
+		}
+	}
+
+	void release() {
+		if (mpLock) {
+			nxSys::lock_release(mpLock);
+		}
+	}
+
+	void set(sxLock* pLock) {
+		mpLock = pLock;
+	}
+
+	sxLock* get() {
+		return mpLock;
+	}
+} s_memLock = {0};
+
+void set_mem_lock(sxLock* pLock) {
+	s_memLock.set(pLock);
+}
+
 void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib) {
 	if (pSrc && pCtx) {
 		SrcCode src(pSrc, srcSize, 32);
 		CodeBlock blk(*pCtx, pFuncLib);
+		blk.init();
 
 		while (!(src.eof() || pCtx->should_break())) {
 			SrcCode::Line line = src.get_line();
@@ -72,8 +101,6 @@ void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pF
 				blk.parse(line);
 				blk.print();
 				blk.eval();
-
-				blk.reset();
 			}
 		}
 		//src.restart();
@@ -325,17 +352,24 @@ void ExecContext::init(void* pBinding) {
 	mErrCode = EvalError::NONE;
 	mBreak = false;
 
+	s_memLock.acquire();
 	mpVarMap = VarMap::create();
+	mpVarMap->set_mem_lock(s_memLock.get());
+	s_memLock.release();
 }
 
 void ExecContext::reset() {
 	if (mpStrs) {
+		s_memLock.acquire();
 		cxStrStore::destroy(mpStrs);
 		mpStrs = nullptr;
+		s_memLock.release();
 	}
 	if (mpVarMap) {
+		s_memLock.acquire();
 		VarMap::destroy(mpVarMap);
 		mpVarMap = nullptr;
+		s_memLock.release();
 	}
 
 	mVarCnt = 0;
@@ -347,10 +381,14 @@ char* ExecContext::add_str(const char* pStr) {
 	char* pStored = nullptr;
 	if (pStr) {
 		if (mpStrs == nullptr) {
+			s_memLock.acquire();
 			mpStrs = cxStrStore::create();
+			s_memLock.release();
 		}
 		if (mpStrs) {
+			s_memLock.acquire();
 			pStored = mpStrs->add(pStr);
+			s_memLock.release();
 		}
 	}
 	return pStored;
@@ -473,10 +511,6 @@ void ExecContext::set_break(const bool brk) {
 
 bool ExecContext::should_break() const {
 	return mBreak;
-}
-
-void ExecContext::set_mem_lock(sxLock* pLock) {
-	mpVarMap->set_mem_lock(pLock);
 }
 
 void ExecContext::set_local_binding(void* pBinding) {
@@ -612,28 +646,32 @@ static bool check_numop(const char* pSym, NumOpInfo* pInfo) {
 	return res;
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void CodeBlock::init() {
+	mListCnt = 0;
+	mListStack.reset();
+}
 
 void CodeBlock::reset() {
-	mpListStack->reset();
+	PINT_DBG_MSG("Releasing %d lists\n", mListCnt);
+	for (uint32_t i = 0; i < ListStack::CODE_LST_MAX; ++i) {
+		mLists[i].reset();
+	}
 	mListCnt = 0;
+	mListStack.reset();
 }
 
 CodeBlock::CodeBlock(ExecContext& ctx, FuncLibrary* pFuncLib) :
 	mCtx(ctx),
-	mpFuncLib(pFuncLib)
+	mpFuncLib(pFuncLib),
+	mListCnt(0)
 {
-	mpListStack = nxCore::tMem<ListStack>::alloc(1, "pint:stack");
-	mpLists = nxCore::tMem<CodeList>::alloc(ListStack::CODE_LST_MAX, "pint:codelists");
-	reset();
+	mListStack.reset();
 }
 
-CodeBlock::~CodeBlock() {
-	nxCore::tMem<ListStack>::free(mpListStack);
-	nxCore::tMem<CodeList>::free(mpLists, ListStack::CODE_LST_MAX);
-}
+CodeBlock::~CodeBlock() {}
 
 CodeList* CodeBlock::new_list() {
-	CodeList* pLst = mListCnt >= ListStack::CODE_LST_MAX ? nullptr : &mpLists[mListCnt++];
+	CodeList* pLst = mListCnt >= ListStack::CODE_LST_MAX ? nullptr : &mLists[mListCnt++];
 	return pLst;
 }
 
@@ -641,17 +679,17 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 	CodeItem item;
 	item.set_none();
 
-	CodeList* pTopLst = mpListStack->top();
+	CodeList* pTopLst = mListStack.top();
 
 	if (tok.is_punctuation()) {
 		if (tok.id == cxXqcLexer::TokId::TOK_SEMICOLON) return false;
 		if (tok.id == cxXqcLexer::TokId::TOK_LPAREN) {
 			CodeList* pNewLst = new_list();
 			if (pNewLst == nullptr) return false;
-			mpListStack->push(pNewLst);
+			mListStack.push(pNewLst);
 			item.set_list(pNewLst);
 		} else if (tok.id == cxXqcLexer::TokId::TOK_RPAREN) {
-			mpListStack->pop();
+			mListStack.pop();
 		} else {
 			item.set_sym(tok.val.c);
 		}
@@ -675,11 +713,8 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 }
 
 void CodeBlock::parse(const SrcCode::Line& line) {
-	for (int i = 0; i < ListStack::CODE_LST_MAX; ++i) {
-		mpLists[i].reset();
-	}
-	mListCnt = 0;
-	mpListStack->reset();
+	reset();
+
 	if (line.valid()) {
 		cxLexer lexer;
 		lexer.set_text(line.pText, line.textSize);
@@ -863,7 +898,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 
 void CodeBlock::eval() {
 	mCtx.set_error(EvalError::NONE);
-	eval_sub(&mpLists[0]);
+	eval_sub(&mLists[0]);
 }
 
 void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
@@ -887,7 +922,7 @@ void CodeBlock::print_sub(const CodeList* pLst, int lvl) const {
 void CodeBlock::print() const {
 	if (mListCnt == 0) return;
 	PINT_DBG_MSG("# lists: %d\n", mListCnt);
-	print_sub(mpLists, 1);
+	print_sub(mLists, 1);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -948,10 +983,12 @@ void CodeList::init() {
 
 void CodeList::reset() {
 	if (mpItems) {
+		s_memLock.acquire();
 		nxCore::mem_free(mpItems);
 		mpItems = nullptr;
 		mCount = 0;
 		mCapacity = mChunkSize;
+		s_memLock.release();
 	}
 }
 
@@ -962,12 +999,16 @@ bool CodeList::valid() const {
 void CodeList::append(const CodeItem& itm) {
 	if (mpItems == nullptr) {
 		size_t sz = mChunkSize * sizeof(CodeItem);
+		s_memLock.acquire();
 		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
+		s_memLock.release();
 		mCapacity = mChunkSize;
 	}
 	if (mCount >= mCapacity) {
 		size_t newSz = (mCapacity + mChunkSize)*sizeof(CodeItem);
+		s_memLock.acquire();
 		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
+		s_memLock.release();
 		mCapacity += mChunkSize;
 	}
 	mpItems[mCount++] = itm;
