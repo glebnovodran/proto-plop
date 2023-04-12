@@ -360,10 +360,8 @@ void ExecContext::init(void* pBinding) {
 
 void ExecContext::reset() {
 	if (mpStrs) {
-		s_memLock.acquire();
 		cxStrStore::destroy(mpStrs);
 		mpStrs = nullptr;
-		s_memLock.release();
 	}
 	if (mpVarMap) {
 		s_memLock.acquire();
@@ -381,14 +379,10 @@ char* ExecContext::add_str(const char* pStr) {
 	char* pStored = nullptr;
 	if (pStr) {
 		if (mpStrs == nullptr) {
-			s_memLock.acquire();
-			mpStrs = cxStrStore::create();
-			s_memLock.release();
+			mpStrs = cxStrStore::create("PintStrStore", s_memLock.get());
 		}
 		if (mpStrs) {
-			s_memLock.acquire();
 			pStored = mpStrs->add(pStr);
-			s_memLock.release();
 		}
 	}
 	return pStored;
