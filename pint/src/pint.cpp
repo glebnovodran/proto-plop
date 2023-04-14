@@ -712,7 +712,7 @@ void CodeBlock::parse(const SrcCode::Line& line) {
 	if (line.valid()) {
 		cxLexer lexer;
 		lexer.set_text(line.pText, line.textSize);
-		lexer.scan(*this);
+		lexer.scan(*this, s_memLock.get());
 	}
 }
 
