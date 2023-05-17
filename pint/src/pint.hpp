@@ -117,7 +117,7 @@ protected:
 	void* mpBinding;
 	Value mVarVals[CODE_VAR_MAX];
 	const char* mpVarNames[CODE_VAR_MAX];
-	uint32_t mVarCnt;
+	size_t mVarCnt;
 	EvalError mErrCode;
 	bool mBreak;
 public:
@@ -134,6 +134,7 @@ public:
 	int find_var(const char* pName) const;
 	Value* var_val(int id);
 
+	void clear_vars();
 	void print_vars();
 
 	void set_break(const bool brk = true);
@@ -183,6 +184,10 @@ struct CodeItem {
 	bool is_list() const;
 };
 
+#if !defined(PINT_CL_CHUNK_SZ)
+	#define PINT_CL_CHUNK_SZ 16
+#endif
+
 class CodeList {
 protected:
 	CodeItem* mpItems;
@@ -190,7 +195,7 @@ protected:
 	uint32_t mCount;
 	uint32_t mCapacity;
 public:
-	CodeList(const uint32_t chunkSize = 2)
+	CodeList(const uint32_t chunkSize = PINT_CL_CHUNK_SZ) // ifndef macro
 	:
 	mpItems(nullptr),
 	mChunkSize(chunkSize),

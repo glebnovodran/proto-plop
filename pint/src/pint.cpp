@@ -103,7 +103,6 @@ void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pF
 				blk.eval();
 			}
 		}
-		//src.restart();
 	}
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -427,6 +426,10 @@ Value* ExecContext::var_val(int id) {
 		pVal = &mVarVals[id];
 	}
 	return pVal;
+}
+
+void ExecContext::clear_vars() {
+	mVarCnt = 0;
 }
 
 void ExecContext::print_vars() {
