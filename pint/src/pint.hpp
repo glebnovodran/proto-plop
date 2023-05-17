@@ -199,7 +199,8 @@ public:
 	:
 	mpItems(nullptr),
 	mChunkSize(chunkSize),
-	mCount(0)
+	mCount(0),
+	mCapacity(0)
 	{
 		init();
 	}
