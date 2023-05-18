@@ -175,6 +175,23 @@ SrcCode::Line SrcCode::get_line() {
 	return line;
 }
 
+void SrcCode::make_cache_key(char* pBuf, const size_t bufSize) {
+	if (pBuf && (bufSize > 0)) {
+		nxCore::mem_zero(pBuf, bufSize);
+
+		if (mpSrc && (mSrcSize > 0)) {
+			size_t idx = 0;
+			uintptr_t addr = reinterpret_cast<uintptr_t>(mpSrc);
+
+			while ((idx < sizeof(void*)*2) && (idx < (bufSize - 1))) {
+				static const char* hex = "0123456789abcdef";
+				pBuf[idx] = hex[(addr >> (idx << 2)) & 0xF];
+				++idx;
+			}
+		}
+	}
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void Value::set_none() {

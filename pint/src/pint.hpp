@@ -34,6 +34,8 @@ public:
 	bool eof() const;
 
 	Line get_line();
+
+	void make_cache_key(char* pBuf, const size_t bufSize);
 };
 
 struct Value {
