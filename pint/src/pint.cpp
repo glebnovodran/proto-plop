@@ -90,7 +90,7 @@ void set_mem_lock(sxLock* pLock) {
 
 void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib) {
 	if (pSrc && pCtx) {
-		SrcCode src(pSrc, srcSize, 32);
+		SrcCode src(pSrc, srcSize);
 		CodeBlock blk(*pCtx, pFuncLib);
 		blk.init();
 
@@ -125,7 +125,7 @@ bool SrcCode::Line::valid() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
-SrcCode::SrcCode(const char* pSrc, size_t srcSize, const size_t cnkSize)
+SrcCode::SrcCode(const char* pSrc, size_t srcSize)
 	:
 	mpSrc(pSrc),
 	mSrcSize(srcSize),

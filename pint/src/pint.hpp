@@ -25,7 +25,7 @@ public:
 		void print() const;
 	};
 
-	SrcCode(const char* pSrc, size_t srcSize, const size_t cnkSize = 4096);
+	SrcCode(const char* pSrc, size_t srcSize);
 
 	~SrcCode() {}
 
