@@ -36,6 +36,10 @@ public:
 	Line get_line();
 
 	void make_cache_key(char* pBuf, const size_t bufSize);
+
+	const char* get_source();
+
+	size_t source_size() const;
 };
 
 struct Value {
@@ -277,5 +281,7 @@ public:
 void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib);
 
 void set_mem_lock(sxLock* pLock);
+
+void cache(const char* pSrc, size_t srcSize);
 
 } // Pint

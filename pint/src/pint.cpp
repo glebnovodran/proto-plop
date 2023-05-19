@@ -105,6 +105,9 @@ void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pF
 		}
 	}
 }
+
+void cache(const char* pSrc, size_t srcSize) {}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void SrcCode::Line::print() const {
@@ -190,6 +193,15 @@ void SrcCode::make_cache_key(char* pBuf, const size_t bufSize) {
 			}
 		}
 	}
+}
+
+
+const char* SrcCode::get_source() {
+	return mpSrc;
+}
+
+size_t SrcCode::source_size() const {
+	return mSrcSize;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
