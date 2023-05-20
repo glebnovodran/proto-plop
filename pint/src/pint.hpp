@@ -276,6 +276,8 @@ public:
 	void reset();
 
 	void print() const;
+
+	void from_tokens(cxLexer::Token* pTop, const size_t ntok);
 };
 
 void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib);

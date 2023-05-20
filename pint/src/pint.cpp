@@ -951,6 +951,15 @@ void CodeBlock::print() const {
 	print_sub(mLists, 1);
 }
 
+void CodeBlock::from_tokens(cxLexer::Token* pTop, const size_t ntok) {
+	reset();
+	if (pTop) {
+		for (size_t i = 0; i < ntok; ++i) {
+			bool tokRes = (*this)(pTop[i]);
+			if (!tokRes) break;
+		}
+	}
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CodeItem::set_none() {
