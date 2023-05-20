@@ -708,24 +708,24 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 	CodeList* pTopLst = mListStack.top();
 
 	if (tok.is_punctuation()) {
-		if (tok.id == cxXqcLexer::TokId::TOK_SEMICOLON) return false;
-		if (tok.id == cxXqcLexer::TokId::TOK_LPAREN) {
+		if (tok.id == cxLexer::TokId::TOK_SEMICOLON) return false;
+		if (tok.id == cxLexer::TokId::TOK_LPAREN) {
 			CodeList* pNewLst = new_list();
 			if (pNewLst == nullptr) return false;
 			mListStack.push(pNewLst);
 			item.set_list(pNewLst);
-		} else if (tok.id == cxXqcLexer::TokId::TOK_RPAREN) {
+		} else if (tok.id == cxLexer::TokId::TOK_RPAREN) {
 			mListStack.pop();
 		} else {
 			item.set_sym(tok.val.c);
 		}
 	} else if (tok.is_symbol()) {
 		item.set_sym(reinterpret_cast<char*>(tok.val.p));
-	} else if (tok.id == cxXqcLexer::TokId::TOK_FLOAT) {
+	} else if (tok.id == cxLexer::TokId::TOK_FLOAT) {
 		item.set_num(tok.val.f);
-	} else if (tok.id == cxXqcLexer::TokId::TOK_INT) {
+	} else if (tok.id == cxLexer::TokId::TOK_INT) {
 		item.set_num(tok.val.i);
-	} else if ((tok.id == cxXqcLexer::TokId::TOK_QSTR) || (tok.id == cxXqcLexer::TokId::TOK_SQSTR)) {
+	} else if ((tok.id == cxLexer::TokId::TOK_QSTR) || (tok.id == cxLexer::TokId::TOK_SQSTR)) {
 		const char* pStr = mCtx.add_str(reinterpret_cast<const char*>(tok.val.p));
 		item.set_str(pStr);
 	}
