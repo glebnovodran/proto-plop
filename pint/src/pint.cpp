@@ -725,7 +725,7 @@ bool CodeBlock::operator()(const cxLexer::Token& tok) {
 		item.set_num(tok.val.f);
 	} else if (tok.id == cxLexer::TokId::TOK_INT) {
 		item.set_num(tok.val.i);
-	} else if ((tok.id == cxLexer::TokId::TOK_QSTR) || (tok.id == cxLexer::TokId::TOK_SQSTR)) {
+	} else if (tok.is_string()) {
 		const char* pStr = mCtx.add_str(reinterpret_cast<const char*>(tok.val.p));
 		item.set_str(pStr);
 	}
