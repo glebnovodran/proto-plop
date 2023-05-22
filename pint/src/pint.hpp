@@ -200,6 +200,8 @@ protected:
 	uint32_t mChunkSize;
 	uint32_t mCount;
 	uint32_t mCapacity;
+	CodeItem mItems[PINT_CL_CHUNK_SZ];
+
 public:
 	CodeList(const uint32_t chunkSize = PINT_CL_CHUNK_SZ) // ifndef macro
 	:

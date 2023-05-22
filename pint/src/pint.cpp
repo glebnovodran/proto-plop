@@ -1018,13 +1018,15 @@ void CodeList::init() {
 
 void CodeList::reset() {
 	if (mpItems) {
-		s_memLock.acquire();
-		nxCore::mem_free(mpItems);
+		if (mpItems != mItems) {
+			s_memLock.acquire();
+			nxCore::mem_free(mpItems);
+			s_memLock.release();
+		}
 		mpItems = nullptr;
-		mCount = 0;
-		mCapacity = mChunkSize;
-		s_memLock.release();
 	}
+	mCount = 0;
+	mCapacity = 0;
 }
 
 bool CodeList::valid() const {
@@ -1033,18 +1035,33 @@ bool CodeList::valid() const {
 
 void CodeList::append(const CodeItem& itm) {
 	if (mpItems == nullptr) {
+#if 0
 		size_t sz = mChunkSize * sizeof(CodeItem);
 		s_memLock.acquire();
 		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(sz));
 		s_memLock.release();
 		mCapacity = mChunkSize;
+#else
+		mpItems = mItems;
+		mCapacity = PINT_CL_CHUNK_SZ;
+#endif
 	}
 	if (mCount >= mCapacity) {
-		size_t newSz = (mCapacity + mChunkSize)*sizeof(CodeItem);
+		size_t newCap = mCapacity + mChunkSize;
+		size_t newSz = newCap * sizeof(CodeItem);
 		s_memLock.acquire();
-		mpItems = reinterpret_cast<CodeItem*>(nxCore::mem_realloc(mpItems, newSz));
+		CodeItem* pNewItems = reinterpret_cast<CodeItem*>(nxCore::mem_alloc(newSz));
 		s_memLock.release();
-		mCapacity += mChunkSize;
+		if (pNewItems) {
+			nxCore::mem_copy(pNewItems, mpItems, mCapacity * sizeof(CodeItem));
+			if (mpItems != mItems) {
+				s_memLock.acquire();
+				nxCore::mem_free(mpItems);
+				s_memLock.release();
+			}
+			mpItems = pNewItems;
+			mCapacity += mChunkSize;
+		}
 	}
 	mpItems[mCount++] = itm;
 }
