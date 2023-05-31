@@ -451,7 +451,7 @@ int ExecContext::find_var(const char* pName) const {
 
 Value* ExecContext::var_val(int id) {
 	Value* pVal = nullptr;
-	if ((id >= 0) && (id < CODE_VAR_MAX)) {
+	if ((id >= 0) && (id < (int)CODE_VAR_MAX)) {
 		pVal = &mVarVals[id];
 	}
 	return pVal;
