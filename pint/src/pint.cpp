@@ -457,6 +457,15 @@ Value* ExecContext::var_val(int id) {
 	return pVal;
 }
 
+Value* ExecContext::var_val(const char* pVarName) {
+	return var_val(find_var(pVarName));
+}
+
+double ExecContext::get_num_val(const char* pVarName, const double defVal) {
+	Pint::Value* pVal = var_val(pVarName);
+	return pVal ? pVal->val.num : defVal;
+}
+
 void ExecContext::clear_vars() {
 	mVarCnt = 0;
 }
@@ -821,7 +830,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 				if (i + 1 < cnt) {
 					CodeItem* pVarNameItem = pItem + 1;
 					const char* pVarName = pVarNameItem->val.sym;
-					Value* pVal = mCtx.var_val(mCtx.find_var(pVarName));
+					Value* pVal = mCtx.var_val(pVarName);
 					if (pVal) {
 						if (i + 2 < cnt) {
 							val = eval_sub(pLst, 2, 1);
@@ -902,7 +911,7 @@ Value CodeBlock::eval_sub(CodeList* pLst, const uint32_t org, const uint32_t sli
 					mCtx.set_error(EvalError::BAD_FUNC_ARGS);
 				}
 			} else { // variable name
-				Value* pVal = mCtx.var_val(mCtx.find_var(pItem->val.sym));
+				Value* pVal = mCtx.var_val(pItem->val.sym);
 				if (pVal) {
 					val = *pVal;
 				} else {

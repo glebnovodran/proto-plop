@@ -138,7 +138,11 @@ public:
 
 	int add_var(const char* pName);
 	int find_var(const char* pName) const;
+
 	Value* var_val(int id);
+	Value* var_val(const char* pName);
+
+	double get_num_val(const char* pVarName, const double defVal = 0.0);
 
 	void clear_vars();
 	void print_vars();
