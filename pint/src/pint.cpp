@@ -468,6 +468,13 @@ double ExecContext::get_num_val(const char* pVarName, const double defVal) {
 
 void ExecContext::clear_vars() {
 	mVarCnt = 0;
+
+	if (mpStrs) {
+			mpStrs->purge();
+	}
+	if (mpVarMap) {
+			mpVarMap->purge();
+	}
 }
 
 void ExecContext::print_vars() {
