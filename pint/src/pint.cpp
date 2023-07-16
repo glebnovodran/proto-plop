@@ -470,10 +470,10 @@ void ExecContext::clear_vars() {
 	mVarCnt = 0;
 
 	if (mpStrs) {
-			mpStrs->purge();
+		mpStrs->purge();
 	}
 	if (mpVarMap) {
-			mpVarMap->purge();
+		mpVarMap->purge();
 	}
 }
 
