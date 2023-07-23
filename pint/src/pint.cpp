@@ -90,6 +90,7 @@ void set_mem_lock(sxLock* pLock) {
 
 void interp(const char* pSrc, size_t srcSize, ExecContext* pCtx, FuncLibrary* pFuncLib) {
 	if (pSrc && pCtx) {
+		pCtx->clear_vars();
 		SrcCode src(pSrc, srcSize);
 		CodeBlock blk(*pCtx, pFuncLib);
 		blk.init();
